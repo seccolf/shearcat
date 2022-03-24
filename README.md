@@ -1,2 +1,2 @@
 # shearcat
-All-DECam shear catalog tests
+All-DECam shear catalog tests and paper
