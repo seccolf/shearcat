@@ -68,53 +68,70 @@ path_to_image = rootdir+'r/'
 path_to_psf = rootdit+'psf_r/'
 
 for name_of_image in listdir(rootdir+path_to_image):
-        
-        prefix = name_of_image[0:25] #the prefix containing expnum, band and ccdnum
-        print('doing ',prefix)
-        starlist = prefix+'psfex-starlist.fits'
-        psfmodel = prefix+'psfexcat.psf'
-        image, weight, starlist, des_psfex, wcs_pixel_world = load_psf_and_image(path_to_image,name_of_image,path_to_psf,starlist,psfmodel)
-        goodstar=get_psf_stars_index(starlist)
+  
+    prefix = name_of_image[0:25] #the prefix containing expnum, band and ccdnum
+    print('doing ',prefix)
+    outputfile_name =rootdir+'measurements/'+prefix[0:-1]+'.txt'
+    outputfile = open(outputfile_name,'w')
+    outputfile.write('#pix_x pix_y ra dec g1_star g2_star T_star g1_model g2_model T_model\n')
+    starlist = prefix+'psfex-starlist.fits'
+    psfmodel = prefix+'psfexcat.psf'
+    image, weight, starlist, des_psfex, wcs_pixel_world = load_psf_and_image(path_to_image,
+                                                            name_of_image,
+                                                            path_to_psf,
+                                                            starlist,
+                                                            psfmodel)
+    goodstar=get_psf_stars_index(starlist)
+    print('found %d stars that pass flags'%len(goodstar))
+    for goodstar_index in goodstar:
+
+        X = starlist[2].data['x_image'].astype(int)[goodstar_index] 
+        Y = starlist[2].data['y_image'].astype(int)[goodstar_index]
+        X_float = starlist[2].data['x_image'][goodstar_index] #getting them as floats also (as in the file itself)
+        Y_float = starlist[2].data['y_image'][goodstar_index]
+
+        newbounds = galsim.BoundsI(X-stampsize/2,X+stampsize/2,Y-stampsize/2,Y+stampsize/2)
+
+        image_cutout = image[newbounds].array
+        weight_cutout = weight[newbounds].array
+
+        #position where we want the PSF
+        psf_pos = galsim.PositionD(X, Y)
+        psf_model = des_psfex.getPSF(psf_pos)
+
+        copy_stamp = image[newbounds].copy() #copies the galsim object with wcs and everything
+        psf_image=psf_model.drawImage(image=copy_stamp,method='no_pixel')
+        psf_cutout = psf_image.array
+
+        #get the wcs at the location 
+        psf_wcs = des_psfex.getLocalWCS(psf_pos)
+
+        ra,dec = wcs_pixel_world.pixel_to_world_values(X_float, Y_float)
+        ra = ra.item()
+        dec=dec.item()
+
+        #now create the ngmix observations
+        star_obs = ngmix.Observation(
+        	image=image_cutout,
+        	weight=weight_cutout,
+        	jacobian=ngmix.Jacobian(row=stampsize/2 , col=stampsize/2 , wcs=psf_wcs))
+
+        psf_model_obs = ngmix.Observation(
+        	image=psf_cutout,
+        	weight=np.ones(psf_cutout.shape),
+        	jacobian=ngmix.Jacobian(row=stampsize/2 , col=stampsize/2 , wcs=psf_wcs))
+
+        g1_star, g2_star, T_star = measure_shear_of_ngmix_obs(star_obs)
+        g1_model, g2_model, T_model = measure_shear_of_ngmix_obs(psf_model_obs)
+        outputfile.write('%f %f %f %f %f %f %f %f %f %f\n'%(X_float, Y_float,
+                                                            ra, dec,
+                                                            g1_star, g2_star, T_star,
+                                                            g1_model, g2_model, T_model))
+    outputfile.close()
+    print('wrote ',prefix,'to ',outputfile_name)
+    
 
 
-X = starlist[2].data['x_image'].astype(int)[goodstar_index] 
-Y = starlist[2].data['y_image'].astype(int)[goodstar_index]
-X_float = starlist[2].data['x_image'][goodstar_index] #getting them as floats also (as in the file itself)
-Y_float = starlist[2].data['y_image'][goodstar_index]
-
-newbounds = galsim.BoundsI(X-stampsize/2,X+stampsize/2,Y-stampsize/2,Y+stampsize/2)
-
-image_cutout = image[newbounds].array
-weight_cutout = weight[newbounds].array
-
-#position where we want the PSF
-psf_pos = galsim.PositionD(X, Y)
-psf_model = des_psfex.getPSF(psf_pos)
-
-copy_stamp = image[newbounds].copy() #copies the galsim object with wcs and everything
-psf_image=psf_model.drawImage(image=copy_stamp,method='no_pixel')
-psf_cutout = psf_image.array
-
-#get the wcs at the location 
-psf_wcs = des_psfex.getLocalWCS(psf_pos)
-
-ra,dec = wcs_pixel_world.pixel_to_world_values(X_float, Y_float)
-ra = ra.item()
-dec=dec.item()
-
-#now create the ngmix observations
-star_obs = ngmix.Observation(
-	image=image_cutout,
-	weight=weight_cutout,
-	jacobian=ngmix.Jacobian(row=stampsize/2 , col=stampsize/2 , wcs=psf_wcs))
-
-psf_model_obs = ngmix.Observation(
-	image=psf_cutout,
-	weight=np.ones(psf_cutout.shape),
-	jacobian=ngmix.Jacobian(row=stampsize/2 , col=stampsize/2 , wcs=psf_wcs))
-
-g1_star, g2_star, T_star = measure_shear_of_ngmix_obs(star_obs)
-g1_model, g2_model, T_model = measure_shear_of_ngmix_obs(psf_model_obs)
 
 
 
