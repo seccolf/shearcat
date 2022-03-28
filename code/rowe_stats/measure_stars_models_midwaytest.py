@@ -65,9 +65,9 @@ def measure_shear_of_ngmix_obs(obs,prefix,i):
 
 rootdir = '/home/secco/project2-kicp-secco/delve/rowe_stats_files/exp145973/'
 path_to_image = rootdir+'r/'
-path_to_psf = rootdit+'psf_r/'
+path_to_psf = rootdir+'psf_r/'
 
-for name_of_image in listdir(rootdir+path_to_image):
+for name_of_image in listdir(path_to_image):
     time1=time()  
     prefix = name_of_image[0:25] #the prefix containing expnum, band and ccdnum
     print('doing ',prefix)
