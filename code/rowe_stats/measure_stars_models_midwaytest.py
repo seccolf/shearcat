@@ -14,9 +14,9 @@ from astropy.wcs import WCS
 import logging
 import pandas as pd
 from os import listdir
-
+from time import clock
 #
-logging.basicConfig(filename='example.log', encoding='utf-8', level=logging.DEBUG)
+logging.basicConfig(filename='test.log', encoding='utf-8', level=logging.INFO)
 
 #RNG
 rng = np.random.RandomState(seed=42)
@@ -41,11 +41,11 @@ def get_psf_stars_index(starlist):
 	return goodstars
 
 
-def measure_shear_of_ngmix_obs(obs):
+def measure_shear_of_ngmix_obs(obs,prefix,i):
     am = Admom(rng=rng)
     res = am.go(obs, 0.3)
     if res['flags'] != 0:
-        logging.info('admom flagged object %d: '%i,flagstr(res['flags']))
+        logging.info('admom flagged object %d in: '%i,prefix,' ',flagstr(res['flags']))
     lm = LMSimple('gauss')
     lm_res = lm.go(obs, res['pars'])
     #print(lm_res['flags'])
@@ -55,8 +55,8 @@ def measure_shear_of_ngmix_obs(obs):
         T = lm_res['pars'][4]
         return g1, g2, T
     else: 
-        logging.info('lm flagged object %d: '%i,flagstr(res['flags']))
-        return 0
+        logging.info('lm flagged object %d in: '%i,prefix,' ',flagstr(res['flags']))
+        return np.nan, np.nan, np.nan
 
 
 
@@ -68,7 +68,7 @@ path_to_image = rootdir+'r/'
 path_to_psf = rootdit+'psf_r/'
 
 for name_of_image in listdir(rootdir+path_to_image):
-  
+    time1=clock()  
     prefix = name_of_image[0:25] #the prefix containing expnum, band and ccdnum
     print('doing ',prefix)
     outputfile_name =rootdir+'measurements/'+prefix[0:-1]+'.txt'
@@ -121,14 +121,15 @@ for name_of_image in listdir(rootdir+path_to_image):
         	weight=np.ones(psf_cutout.shape),
         	jacobian=ngmix.Jacobian(row=stampsize/2 , col=stampsize/2 , wcs=psf_wcs))
 
-        g1_star, g2_star, T_star = measure_shear_of_ngmix_obs(star_obs)
-        g1_model, g2_model, T_model = measure_shear_of_ngmix_obs(psf_model_obs)
+        g1_star, g2_star, T_star = measure_shear_of_ngmix_obs(star_obs,prefix,goodstar_index)
+        g1_model, g2_model, T_model = measure_shear_of_ngmix_obs(psf_model_obs,prefix,goodstar_index)
         outputfile.write('%f %f %f %f %f %f %f %f %f %f\n'%(X_float, Y_float,
                                                             ra, dec,
                                                             g1_star, g2_star, T_star,
                                                             g1_model, g2_model, T_model))
     outputfile.close()
-    print('wrote ',prefix,'to ',outputfile_name)
+    time2=clock()
+    print('wrote ',prefix,'to ',outputfile_name,'(took %1.2f seconds)\n'%(time2-time1))
     
 
 
