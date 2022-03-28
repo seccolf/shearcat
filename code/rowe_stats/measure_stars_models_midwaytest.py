@@ -14,7 +14,7 @@ from astropy.wcs import WCS
 import logging
 import pandas as pd
 from os import listdir
-from time import clock
+from time import time
 #
 logging.basicConfig(filename='test.log', encoding='utf-8', level=logging.INFO)
 
@@ -68,7 +68,7 @@ path_to_image = rootdir+'r/'
 path_to_psf = rootdit+'psf_r/'
 
 for name_of_image in listdir(rootdir+path_to_image):
-    time1=clock()  
+    time1=time()  
     prefix = name_of_image[0:25] #the prefix containing expnum, band and ccdnum
     print('doing ',prefix)
     outputfile_name =rootdir+'measurements/'+prefix[0:-1]+'.txt'
@@ -128,7 +128,7 @@ for name_of_image in listdir(rootdir+path_to_image):
                                                             g1_star, g2_star, T_star,
                                                             g1_model, g2_model, T_model))
     outputfile.close()
-    time2=clock()
+    time2=time()
     print('wrote ',prefix,'to ',outputfile_name,'(took %1.2f seconds)\n'%(time2-time1))
     
 
