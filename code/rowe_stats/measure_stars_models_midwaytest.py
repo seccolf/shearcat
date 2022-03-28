@@ -42,7 +42,7 @@ def get_psf_stars_index(starlist):
 
 
 def measure_shear_of_ngmix_obs(obs):
-	am = Admom(rng=rng)
+    am = Admom(rng=rng)
     res = am.go(obs, 0.3)
     if res['flags'] != 0:
         logging.info('admom flagged object %d: '%i,flagstr(res['flags']))
