@@ -15,6 +15,7 @@ import logging
 import pandas as pd
 from os import listdir
 from time import time
+from re import findall
 #
 logging.basicConfig(filename='test.log', encoding='utf-8', level=logging.INFO)
 
@@ -28,13 +29,15 @@ stampsize=24
 #prefix='/decade/decarchive/'
 
 def load_psf_and_image(path_to_image, name_of_image, path_to_psf, starlist, psfmodel):
-	image = galsim.fits.read(path_to_image+name_of_image)
-	weight = galsim.fits.read(path_to_image+name_of_image,hdu=3)
-	starlist = fits.open(path_to_psf+starlist)
-	des_psfex = galsim.des.DES_PSFEx(path_to_psf+psfmodel,path_to_image+name_of_image)
-	image_fits = fits.open(path_to_image+name_of_image)
-	wcs_pixel_world = WCS(image_fits[1].header) 
-	return image, weight, starlist, des_psfex, wcs_pixel_world
+        image = galsim.fits.read(path_to_image+name_of_image)
+        weight = galsim.fits.read(path_to_image+name_of_image,hdu=3)
+        starlist = fits.open(path_to_psf+starlist)
+        des_psfex = galsim.des.DES_PSFEx(path_to_psf+psfmodel,path_to_image+name_of_image)
+        image_fits = fits.open(path_to_image+name_of_image)
+        wcs_pixel_world = WCS(image_fits[1].header) 
+        ccdcoords = findall(r'\d+',image_fits['sci'].header['detsec']) 
+        min_x_pix, min_y_pix = int(ccdcoords[0]),int(ccdcoords[2])       
+        return image, weight, starlist, des_psfex, wcs_pixel_world, min_x_pix, min_y_pix
 
 def get_psf_stars_index(starlist):
 	goodstars= np.where(starlist[2].data['flags_psf']==0)[0] 
@@ -73,10 +76,10 @@ for name_of_image in listdir(path_to_image):
     print('doing ',prefix)
     outputfile_name =rootdir+'measurements/'+prefix[0:-1]+'.txt'
     outputfile = open(outputfile_name,'w')
-    outputfile.write('#pix_x pix_y ra dec g1_star g2_star T_star g1_model g2_model T_model\n')
+    outputfile.write('#focal_x focal_y pix_x pix_y ra dec g1_star g2_star T_star g1_model g2_model T_model\n')
     starlist = prefix+'psfex-starlist.fits'
     psfmodel = prefix+'psfexcat.psf'
-    image, weight, starlist, des_psfex, wcs_pixel_world = load_psf_and_image(path_to_image,
+    image, weight, starlist, des_psfex, wcs_pixel_world, min_x, min_y = load_psf_and_image(path_to_image,
                                                             name_of_image,
                                                             path_to_psf,
                                                             starlist,
@@ -109,7 +112,7 @@ for name_of_image in listdir(path_to_image):
         ra,dec = wcs_pixel_world.pixel_to_world_values(X_float, Y_float)
         ra = ra.item()
         dec=dec.item()
-
+        
         #now create the ngmix observations
         star_obs = ngmix.Observation(
         	image=image_cutout,
@@ -123,10 +126,11 @@ for name_of_image in listdir(path_to_image):
 
         g1_star, g2_star, T_star = measure_shear_of_ngmix_obs(star_obs,prefix,goodstar_index)
         g1_model, g2_model, T_model = measure_shear_of_ngmix_obs(psf_model_obs,prefix,goodstar_index)
-        outputfile.write('%f %f %f %f %f %f %f %f %f %f\n'%(X_float, Y_float,
-                                                            ra, dec,
-                                                            g1_star, g2_star, T_star,
-                                                            g1_model, g2_model, T_model))
+        outputfile.write('%f %f %f %f %f %f %f %f %f %f %f %f\n'%(X_float+min_x, Y_float+min_y,
+                                                                  X_float, Y_float,
+                                                                  ra, dec,
+                                                                  g1_star, g2_star, T_star,
+                                                                  g1_model, g2_model, T_model))
     outputfile.close()
     time2=time()
     print('wrote ',prefix,'to ',outputfile_name,'(took %1.2f seconds)\n'%(time2-time1))
