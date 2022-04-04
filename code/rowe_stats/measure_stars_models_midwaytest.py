@@ -17,11 +17,9 @@ from os import listdir
 from time import time
 from re import findall
 #
-logging.basicConfig(filename='test.log', encoding='utf-8', level=logging.INFO)
-
+logging.basicConfig(filename='measurement.log', encoding='utf-8', level=logging.INFO)
 #RNG
-rng = np.random.RandomState(seed=42)
-
+rng = np.random.RandomState(seed=666)
 stampsize=24
 
 #assume given image and psf paths:
@@ -61,20 +59,35 @@ def measure_shear_of_ngmix_obs(obs,prefix,i):
         logging.info('lm flagged object %d in: '%i,prefix,' ',flagstr(res['flags']))
         return np.nan, np.nan, np.nan
 
-
-
+def get_band_name(subdirectories):
+    if len(subdirectories!=2):
+        raise ValueError('Did not find only psf_X/ and X/ subdirectories here')
+    if len(subdirectories[0])==1:
+        bandname = subdirectories[0] #assumes the images are in a directory called simply 'g' or 'r' for instance!
+    else:
+        bandname = subdirectories[1]
+    return bandname
 
 #########SOME LOOP
+location = '/home/secco/project2-kicp-secco/delve/rowe_stats_files/'
+output_location = '/home/secco/project2-kicp-secco/delve/rowe_stats_measurements/'
+all_exposures = os.listdir(location) #will get the names of all exposures as strings 'expXXXXXX'
+number_of_exps = len(all_exposures)
 
-rootdir = '/home/secco/project2-kicp-secco/delve/rowe_stats_files/exp145973/'
-path_to_image = rootdir+'r/'
-path_to_psf = rootdir+'psf_r/'
+#exps_for_this_process= [.....................]
+expname = all_exposures[30]
+
+#LOOP OF THE TYPE "for expname in exps_for_this_process"  
+rootdir = location+expname #'/home/secco/project2-kicp-secco/delve/rowe_stats_files/exp145973/'
+band = get_band_name(os.listdir(rootdir)) #finds what band is in this exposure
+path_to_image = rootdir+band+'/' #exp145973/r/ for instance
+path_to_psf = rootdir+'psf_'+band+'/'#exp145973/psf_r/ for instance
 
 for name_of_image in listdir(path_to_image):
     time1=time()  
     prefix = name_of_image[0:25] #the prefix containing expnum, band and ccdnum
     print('doing ',prefix)
-    outputfile_name =rootdir+'measurements/'+prefix[0:-1]+'.txt'
+    outputfile_name =output_location+band+'/'+band+'band_'+prefix[0:-1]+'.txt'
     outputfile = open(outputfile_name,'w')
     outputfile.write('#focal_x focal_y pix_x pix_y ra dec g1_star g2_star T_star g1_model g2_model T_model\n')
     starlist = prefix+'psfex-starlist.fits'
@@ -133,9 +146,13 @@ for name_of_image in listdir(path_to_image):
                                                                   g1_model, g2_model, T_model))
     outputfile.close()
     time2=time()
-    print('wrote ',prefix,'to ',outputfile_name,'(took %1.2f seconds)\n'%(time2-time1))
-    
+    logging.info('wrote ',prefix,'to ',outputfile_name,'(took %1.2f seconds)\n'%(time2-time1))
 
+expnum = int(expname[3:])
+track_whats_done = open(output_location+'DONE_EXPS.txt','a')
+track_whats_done.write(expnum+'\n')
+track_whats_done.close()
+#NOW DELETE ALL FILES!
 
 
 
