@@ -13,10 +13,13 @@ from astropy.io import fits
 from astropy.wcs import WCS
 import logging
 import pandas as pd
-from os import listdir
+from os import listdir,environ
 from time import time
 from re import findall
 #
+PROCESS = int(environ['SLURM_PROCID']) #process ID for a single cpu
+NTASKS = int(environ['SLURM_NTASKS']) #total number of processes running
+
 logging.basicConfig(filename='measurement.log', encoding='utf-8', level=logging.DEBUG, format='%(asctime)s %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p:')
 #RNG
 rng = np.random.RandomState(seed=666)
@@ -86,83 +89,84 @@ output_location = '/home/secco/project2-kicp-secco/delve/rowe_stats_measurements
 all_exposures = listdir(location) #will get the names of all exposures as strings 'expXXXXXX'
 number_of_exps = len(all_exposures)
 
-#exps_for_this_process= [.....................]
-expname = all_exposures[30]
+expnumber_shared = round(number_of_exps/NTASKS +0.5)
+exps_for_this_process= all_exposures[ int(PROCESS*expnumber_shared) : int((PROCESS+1)*expnumber_shared) ]
+for expname in exps_for_this_process:
+    #LOOP OF THE TYPE "for expname in exps_for_this_process"
+    print('PROCESS %d doing ',expname)  
+    rootdir = location+expname+'/' #'/home/secco/project2-kicp-secco/delve/rowe_stats_files/exp145973/'
+    band = get_band_name(listdir(rootdir)) #finds what band is in this exposure
+    path_to_image = rootdir+band+'/' #exp145973/r/ for instance
+    path_to_psf = rootdir+'psf_'+band+'/'#exp145973/psf_r/ for instance
 
-#LOOP OF THE TYPE "for expname in exps_for_this_process"  
-rootdir = location+expname+'/' #'/home/secco/project2-kicp-secco/delve/rowe_stats_files/exp145973/'
-band = get_band_name(listdir(rootdir)) #finds what band is in this exposure
-path_to_image = rootdir+band+'/' #exp145973/r/ for instance
-path_to_psf = rootdir+'psf_'+band+'/'#exp145973/psf_r/ for instance
+    for name_of_image in listdir(path_to_image):
+        time1=time()  
+        prefix = name_of_image[0:25] #the prefix containing expnum, band and ccdnum
+        print('doing ',prefix)
+        outputfile_name =output_location+band+'/'+band+'band_'+prefix[0:-1]+'.txt'
+        outputfile = open(outputfile_name,'w')
+        outputfile.write('#focal_x focal_y pix_x pix_y ra dec g1_star g2_star T_star g1_model g2_model T_model\n')
+        starlist = prefix+'psfex-starlist.fits'
+        psfmodel = prefix+'psfexcat.psf'
+        image, weight, starlist, des_psfex, wcs_pixel_world, min_x, min_y = load_psf_and_image(path_to_image,
+                                                                name_of_image,
+                                                                path_to_psf,
+                                                                starlist,
+                                                                psfmodel)
+        goodstar=get_psf_stars_index(starlist)
+        print('found %d stars that pass flags'%len(goodstar))
+        for goodstar_index in goodstar:
 
-for name_of_image in listdir(path_to_image):
-    time1=time()  
-    prefix = name_of_image[0:25] #the prefix containing expnum, band and ccdnum
-    print('doing ',prefix)
-    outputfile_name =output_location+band+'/'+band+'band_'+prefix[0:-1]+'.txt'
-    outputfile = open(outputfile_name,'w')
-    outputfile.write('#focal_x focal_y pix_x pix_y ra dec g1_star g2_star T_star g1_model g2_model T_model\n')
-    starlist = prefix+'psfex-starlist.fits'
-    psfmodel = prefix+'psfexcat.psf'
-    image, weight, starlist, des_psfex, wcs_pixel_world, min_x, min_y = load_psf_and_image(path_to_image,
-                                                            name_of_image,
-                                                            path_to_psf,
-                                                            starlist,
-                                                            psfmodel)
-    goodstar=get_psf_stars_index(starlist)
-    print('found %d stars that pass flags'%len(goodstar))
-    for goodstar_index in goodstar:
+            X = starlist[2].data['x_image'].astype(int)[goodstar_index] 
+            Y = starlist[2].data['y_image'].astype(int)[goodstar_index]
+            X_float = starlist[2].data['x_image'][goodstar_index] #getting them as floats also (as in the file itself)
+            Y_float = starlist[2].data['y_image'][goodstar_index]
 
-        X = starlist[2].data['x_image'].astype(int)[goodstar_index] 
-        Y = starlist[2].data['y_image'].astype(int)[goodstar_index]
-        X_float = starlist[2].data['x_image'][goodstar_index] #getting them as floats also (as in the file itself)
-        Y_float = starlist[2].data['y_image'][goodstar_index]
+            newbounds = galsim.BoundsI(X-stampsize/2,X+stampsize/2,Y-stampsize/2,Y+stampsize/2)
 
-        newbounds = galsim.BoundsI(X-stampsize/2,X+stampsize/2,Y-stampsize/2,Y+stampsize/2)
+            image_cutout = image[newbounds].array
+            weight_cutout = weight[newbounds].array
 
-        image_cutout = image[newbounds].array
-        weight_cutout = weight[newbounds].array
+            #position where we want the PSF
+            psf_pos = galsim.PositionD(X, Y)
+            psf_model = des_psfex.getPSF(psf_pos)
 
-        #position where we want the PSF
-        psf_pos = galsim.PositionD(X, Y)
-        psf_model = des_psfex.getPSF(psf_pos)
+            copy_stamp = image[newbounds].copy() #copies the galsim object with wcs and everything
+            psf_image=psf_model.drawImage(image=copy_stamp,method='no_pixel')
+            psf_cutout = psf_image.array
 
-        copy_stamp = image[newbounds].copy() #copies the galsim object with wcs and everything
-        psf_image=psf_model.drawImage(image=copy_stamp,method='no_pixel')
-        psf_cutout = psf_image.array
+            #get the wcs at the location 
+            psf_wcs = des_psfex.getLocalWCS(psf_pos)
 
-        #get the wcs at the location 
-        psf_wcs = des_psfex.getLocalWCS(psf_pos)
+            ra,dec = wcs_pixel_world.pixel_to_world_values(X_float, Y_float)
+            ra = ra.item()
+            dec=dec.item()
+            
+            #now create the ngmix observations
+            star_obs = ngmix.Observation(
+            	image=image_cutout,
+            	weight=weight_cutout,
+            	jacobian=ngmix.Jacobian(row=stampsize/2 , col=stampsize/2 , wcs=psf_wcs))
 
-        ra,dec = wcs_pixel_world.pixel_to_world_values(X_float, Y_float)
-        ra = ra.item()
-        dec=dec.item()
-        
-        #now create the ngmix observations
-        star_obs = ngmix.Observation(
-        	image=image_cutout,
-        	weight=weight_cutout,
-        	jacobian=ngmix.Jacobian(row=stampsize/2 , col=stampsize/2 , wcs=psf_wcs))
+            psf_model_obs = ngmix.Observation(
+            	image=psf_cutout,
+            	weight=np.ones(psf_cutout.shape),
+            	jacobian=ngmix.Jacobian(row=stampsize/2 , col=stampsize/2 , wcs=psf_wcs))
 
-        psf_model_obs = ngmix.Observation(
-        	image=psf_cutout,
-        	weight=np.ones(psf_cutout.shape),
-        	jacobian=ngmix.Jacobian(row=stampsize/2 , col=stampsize/2 , wcs=psf_wcs))
-
-        g1_star, g2_star, T_star = measure_shear_of_ngmix_obs(star_obs,prefix,goodstar_index)
-        g1_model, g2_model, T_model = measure_shear_of_ngmix_obs(psf_model_obs,prefix,goodstar_index)
-        outputfile.write('%f %f %f %f %f %f %f %f %f %f %f %f\n'%(X_float+min_x, Y_float+min_y,
-                                                                  X_float, Y_float,
-                                                                  ra, dec,
-                                                                  g1_star, g2_star, T_star,
-                                                                  g1_model, g2_model, T_model))
-    outputfile.close()
-    time2=time()
-    logging.info('DONE: wrote %s to %s (took %1.2f seconds)'%(prefix,outputfile_name,time2-time1))
-expnum = int(expname[3:])
-track_whats_done = open(output_location+'DONE_EXPS.txt','a')
-track_whats_done.write(expnum+'\n')
-track_whats_done.close()
+            g1_star, g2_star, T_star = measure_shear_of_ngmix_obs(star_obs,prefix,goodstar_index)
+            g1_model, g2_model, T_model = measure_shear_of_ngmix_obs(psf_model_obs,prefix,goodstar_index)
+            outputfile.write('%f %f %f %f %f %f %f %f %f %f %f %f\n'%(X_float+min_x, Y_float+min_y,
+                                                                      X_float, Y_float,
+                                                                      ra, dec,
+                                                                      g1_star, g2_star, T_star,
+                                                                      g1_model, g2_model, T_model))
+        outputfile.close()
+        time2=time()
+        logging.info('DONE: wrote %s to %s (took %1.2f seconds)'%(prefix,outputfile_name,time2-time1))
+    expnum = int(expname[3:])
+    track_whats_done = open(output_location+'DONE_EXPS.txt','a')
+    track_whats_done.write(expnum+'\n')
+    track_whats_done.close()
 #NOW DELETE ALL FILES!
 
 
