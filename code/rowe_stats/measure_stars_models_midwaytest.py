@@ -17,7 +17,7 @@ from os import listdir
 from time import time
 from re import findall
 #
-logging.basicConfig(filename='measurement.log', encoding='utf-8', level=logging.INFO)
+logging.basicConfig(filename='measurement.log', encoding='utf-8', level=logging.DEBUG, format='%(asctime)s %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p:')
 #RNG
 rng = np.random.RandomState(seed=666)
 stampsize=24
@@ -43,24 +43,36 @@ def get_psf_stars_index(starlist):
 
 
 def measure_shear_of_ngmix_obs(obs,prefix,i):
-    am = Admom(rng=rng)
-    res = am.go(obs, 0.3)
-    if res['flags'] != 0:
-        logging.info('admom flagged object %d in: '%i,prefix,' ',flagstr(res['flags']))
-    lm = LMSimple('gauss')
-    lm_res = lm.go(obs, res['pars'])
-    #print(lm_res['flags'])
-    if lm_res['flags'] == 0:
-        g1 = lm_res['pars'][2]
-        g2 = lm_res['pars'][3]
-        T = lm_res['pars'][4]
-        return g1, g2, T
-    else: 
-        logging.info('lm flagged object %d in: '%i,prefix,' ',flagstr(res['flags']))
-        return np.nan, np.nan, np.nan
+        am = Admom(rng=rng)
+        res = am.go(obs, 0.3)
+        if res['flags'] != 0:
+                logging.info('admom flagged object %d in: %s with flags %s'%(i,prefix,flagstr(res['flags'])))
+        lm = LMSimple('gauss')
+        try:
+                lm_res = lm.go(obs, res['pars'])
+                if lm_res['flags'] == 0:
+                        g1 = lm_res['pars'][2]
+                        g2 = lm_res['pars'][3]
+                        T = lm_res['pars'][4]
+                        return g1, g2, T
+                else:
+                        logging.info('lm flagged object %d in: %s with flags %s'%(i,prefix,flagstr(lm_res['flags'])))
+                        return np.nan, np.nan, np.nan
+        except:
+                logging.info("ngmix error in object %d in: %s"%(i,prefix))
+                return np.nan, np.nan, np.nan
+
+#        if lm_res['flags'] == 0:
+#                g1 = lm_res['pars'][2]
+#                g2 = lm_res['pars'][3]
+#                T = lm_res['pars'][4]
+#                return g1, g2, T
+#        else: 
+#                logging.info('lm flagged object %d in: '%i,prefix,' ',flagstr(res['flags']))
+#                return np.nan, np.nan, np.nan
 
 def get_band_name(subdirectories):
-    if len(subdirectories!=2):
+    if len(subdirectories)!=2:
         raise ValueError('Did not find only psf_X/ and X/ subdirectories here')
     if len(subdirectories[0])==1:
         bandname = subdirectories[0] #assumes the images are in a directory called simply 'g' or 'r' for instance!
@@ -71,15 +83,15 @@ def get_band_name(subdirectories):
 #########SOME LOOP
 location = '/home/secco/project2-kicp-secco/delve/rowe_stats_files/'
 output_location = '/home/secco/project2-kicp-secco/delve/rowe_stats_measurements/'
-all_exposures = os.listdir(location) #will get the names of all exposures as strings 'expXXXXXX'
+all_exposures = listdir(location) #will get the names of all exposures as strings 'expXXXXXX'
 number_of_exps = len(all_exposures)
 
 #exps_for_this_process= [.....................]
 expname = all_exposures[30]
 
 #LOOP OF THE TYPE "for expname in exps_for_this_process"  
-rootdir = location+expname #'/home/secco/project2-kicp-secco/delve/rowe_stats_files/exp145973/'
-band = get_band_name(os.listdir(rootdir)) #finds what band is in this exposure
+rootdir = location+expname+'/' #'/home/secco/project2-kicp-secco/delve/rowe_stats_files/exp145973/'
+band = get_band_name(listdir(rootdir)) #finds what band is in this exposure
 path_to_image = rootdir+band+'/' #exp145973/r/ for instance
 path_to_psf = rootdir+'psf_'+band+'/'#exp145973/psf_r/ for instance
 
@@ -146,8 +158,7 @@ for name_of_image in listdir(path_to_image):
                                                                   g1_model, g2_model, T_model))
     outputfile.close()
     time2=time()
-    logging.info('wrote ',prefix,'to ',outputfile_name,'(took %1.2f seconds)\n'%(time2-time1))
-
+    logging.info('DONE: wrote %s to %s (took %1.2f seconds)'%(prefix,outputfile_name,time2-time1))
 expnum = int(expname[3:])
 track_whats_done = open(output_location+'DONE_EXPS.txt','a')
 track_whats_done.write(expnum+'\n')
