@@ -49,7 +49,7 @@ def measure_shear_of_ngmix_obs(obs,prefix,i):
         am = Admom(rng=rng)
         res = am.go(obs, 0.3)
         if res['flags'] != 0:
-                logging.info('admom flagged object %d in: %s with flags %s'%(i,prefix,flagstr(res['flags'])))
+                print('admom flagged object %d in: %s with flags %s'%(i,prefix,flagstr(res['flags'])))
         lm = LMSimple('gauss')
         try:
                 lm_res = lm.go(obs, res['pars'])
@@ -59,10 +59,10 @@ def measure_shear_of_ngmix_obs(obs,prefix,i):
                         T = lm_res['pars'][4]
                         return g1, g2, T
                 else:
-                        logging.info('lm flagged object %d in: %s with flags %s'%(i,prefix,flagstr(lm_res['flags'])))
+                        print('lm flagged object %d in: %s with flags %s'%(i,prefix,flagstr(lm_res['flags'])))
                         return np.nan, np.nan, np.nan
         except:
-                logging.info("ngmix error in object %d in: %s"%(i,prefix))
+                print("ngmix error in object %d in: %s"%(i,prefix))
                 return np.nan, np.nan, np.nan
 
 #        if lm_res['flags'] == 0:
@@ -91,7 +91,8 @@ number_of_exps = len(all_exposures)
 
 expnumber_shared = round(number_of_exps/NTASKS +0.5)
 exps_for_this_process= all_exposures[ int(PROCESS*expnumber_shared) : int((PROCESS+1)*expnumber_shared) ]
-for expname in exps_for_this_process[0:2]:
+print('PROCESS %d will take care of exposures '%PROCESS,exps_for_this_process)
+for expname in exps_for_this_process[0]:
     #LOOP OF THE TYPE "for expname in exps_for_this_process"
     print('PROCESS %d doing ',expname)  
     rootdir = location+expname+'/' #'/home/secco/project2-kicp-secco/delve/rowe_stats_files/exp145973/'
@@ -102,7 +103,7 @@ for expname in exps_for_this_process[0:2]:
     for name_of_image in listdir(path_to_image):
         time1=time()  
         prefix = name_of_image[0:25] #the prefix containing expnum, band and ccdnum
-        print('doing ',prefix)
+        #print('doing ',prefix)
         outputfile_name =output_location+band+'/'+band+'band_'+prefix[0:-1]+'.txt'
         outputfile = open(outputfile_name,'w')
         outputfile.write('#focal_x focal_y pix_x pix_y ra dec g1_star g2_star T_star g1_model g2_model T_model\n')
@@ -114,7 +115,7 @@ for expname in exps_for_this_process[0:2]:
                                                                 starlist,
                                                                 psfmodel)
         goodstar=get_psf_stars_index(starlist)
-        print('found %d stars that pass flags'%len(goodstar))
+        #print('found %d stars that pass flags'%len(goodstar))
         for goodstar_index in goodstar:
 
             X = starlist[2].data['x_image'].astype(int)[goodstar_index] 
@@ -162,10 +163,10 @@ for expname in exps_for_this_process[0:2]:
                                                                       g1_model, g2_model, T_model))
         outputfile.close()
         time2=time()
-        logging.info('DONE: wrote %s to %s (took %1.2f seconds)'%(prefix,outputfile_name,time2-time1))
+        print('PROCESS %d DONE: wrote %s to %s (took %1.2f seconds)'%(PROCESS,prefix,outputfile_name,time2-time1))
     expnum = int(expname[3:])
     track_whats_done = open(output_location+'DONE_EXPS.txt','a')
-    track_whats_done.write(expnum+'\n')
+    track_whats_done.write(str(expnum)+'\n')
     track_whats_done.close()
 #NOW DELETE ALL FILES!
 
