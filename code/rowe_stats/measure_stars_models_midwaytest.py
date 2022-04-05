@@ -20,7 +20,7 @@ from re import findall
 PROCESS = int(environ['SLURM_PROCID']) #process ID for a single cpu
 NTASKS = int(environ['SLURM_NTASKS']) #total number of processes running
 
-logging.basicConfig(filename='measurement.log', encoding='utf-8', level=logging.DEBUG, format='%(asctime)s %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p:')
+logging.basicConfig(filename='measurement.log', encoding='utf-8', level=logging.INFO, format='%(asctime)s %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p:')
 #RNG
 rng = np.random.RandomState(seed=666)
 stampsize=24
@@ -91,7 +91,7 @@ number_of_exps = len(all_exposures)
 
 expnumber_shared = round(number_of_exps/NTASKS +0.5)
 exps_for_this_process= all_exposures[ int(PROCESS*expnumber_shared) : int((PROCESS+1)*expnumber_shared) ]
-for expname in exps_for_this_process:
+for expname in exps_for_this_process[0:2]:
     #LOOP OF THE TYPE "for expname in exps_for_this_process"
     print('PROCESS %d doing ',expname)  
     rootdir = location+expname+'/' #'/home/secco/project2-kicp-secco/delve/rowe_stats_files/exp145973/'
