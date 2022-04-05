@@ -92,7 +92,7 @@ number_of_exps = len(all_exposures)
 expnumber_shared = round(number_of_exps/NTASKS +0.5)
 exps_for_this_process= all_exposures[ int(PROCESS*expnumber_shared) : int((PROCESS+1)*expnumber_shared) ]
 print('PROCESS %d will take care of exposures '%PROCESS,exps_for_this_process)
-for expname in exps_for_this_process[0]:
+for expname in exps_for_this_process[0:2]:
     #LOOP OF THE TYPE "for expname in exps_for_this_process"
     print('PROCESS %d doing ',expname)  
     rootdir = location+expname+'/' #'/home/secco/project2-kicp-secco/delve/rowe_stats_files/exp145973/'
