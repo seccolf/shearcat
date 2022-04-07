@@ -16,11 +16,12 @@ import pandas as pd
 from os import listdir,environ
 from time import time
 from re import findall
+import pdb
 #
 PROCESS = int(environ['SLURM_PROCID']) #process ID for a single cpu
 NTASKS = int(environ['SLURM_NTASKS']) #total number of processes running
 
-logging.basicConfig(filename='measurement.log', encoding='utf-8', level=logging.INFO, format='%(asctime)s %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p:')
+#logging.basicConfig(filename='measurement.log', encoding='utf-8', level=logging.INFO, format='%(asctime)s %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p:')
 #RNG
 rng = np.random.RandomState(seed=666)
 stampsize=24
@@ -92,25 +93,26 @@ number_of_exps = len(all_exposures)
 expnumber_shared = round(number_of_exps/NTASKS +0.5)
 exps_for_this_process= all_exposures[ int(PROCESS*expnumber_shared) : int((PROCESS+1)*expnumber_shared) ]
 print('PROCESS %d will take care of exposures '%PROCESS,exps_for_this_process)
-for expname in exps_for_this_process[0:2]:
+for expname in exps_for_this_process[0:2]: #loops over exposures!
     #LOOP OF THE TYPE "for expname in exps_for_this_process"
-    print('PROCESS %d doing ',expname)  
     rootdir = location+expname+'/' #'/home/secco/project2-kicp-secco/delve/rowe_stats_files/exp145973/'
     band = get_band_name(listdir(rootdir)) #finds what band is in this exposure
+    print('PROCESS %d doing %s (%s-band)'%(PROCESS,expname,band))  
+
     path_to_image = rootdir+band+'/' #exp145973/r/ for instance
     path_to_psf = rootdir+'psf_'+band+'/'#exp145973/psf_r/ for instance
-    time1=time.time()
+    time1=time()
     #now initiate some arrays where the outputs will be appended, then eventually written to fits
-    focal_x, focal_y = np.array([]), np.array([])
-    pix_x, pix_y = np.array([]), np.array([])
-    ra, dec = np.array([]), np.array([])
-    g1_star, g2_star, T_star, g1_model, g2_model, T_model = np.array([]), np.array([]),np.array([]), np.array([]),np.array([]), np.array([])
-
-    for name_of_image in listdir(path_to_image):
+    focal_x_out, focal_y_out = np.array([]), np.array([])
+    pix_x_out, pix_y_out = np.array([]), np.array([])
+    ra_out, dec_out = np.array([]), np.array([])
+    g1_star_out, g2_star_out, T_star_out, g1_model_out, g2_model_out, T_model_out = np.array([]), np.array([]),np.array([]), np.array([]),np.array([]), np.array([])
+    N_failed_stars = 0
+    for name_of_image in listdir(path_to_image)[0:2]: #loops over the CCDs of an exposure!
         prefix = name_of_image[0:25] #the prefix containing expnum, band and ccdnum
         #print('doing ',prefix)
         #outputfile_name =output_location+band+'/'+band+'band_'+prefix[0:-1]+'.txt'
-        outputfile_name =output_location+band+'/'+band+'band_'+prefix[0:-1]+'.fits.fz'
+        outputfile_name =output_location+band+'/'+band+'band_'+expname+'.fits.fz'
 
         #outputfile = open(outputfile_name,'w')
         #outputfile.write('#focal_x focal_y pix_x pix_y ra dec g1_star g2_star T_star g1_model g2_model T_model\n')
@@ -125,9 +127,9 @@ for expname in exps_for_this_process[0:2]:
         Ngoodstar = len(goodstar)
         tmp_focal_x, tmp_focal_y = np.ones(Ngoodstar), np.ones(Ngoodstar)
         tmp_pix_x, tmp_pix_y = np.ones(Ngoodstar), np.ones(Ngoodstar)
-        tmp_ra, tmp_dec = np.array(Ngoodstar), np.array(Ngoodstar)
-        tmp_g1_star, tmp_g2_star, tmp_T_star = np.array(Ngoodstar), np.array(Ngoodstar), np.array(Ngoodstar) 
-        tmp_g1_model, tmp_g2_model, tmp_T_model = np.array(Ngoodstar), np.array(Ngoodstar), np.array(Ngoodstar)
+        tmp_ra, tmp_dec = np.ones(Ngoodstar), np.ones(Ngoodstar)
+        tmp_g1_star, tmp_g2_star, tmp_T_star = np.ones(Ngoodstar), np.ones(Ngoodstar), np.ones(Ngoodstar) 
+        tmp_g1_model, tmp_g2_model, tmp_T_model = np.ones(Ngoodstar), np.ones(Ngoodstar), np.ones(Ngoodstar)
 
         #print('found %d stars that pass flags'%len(goodstar))
         ig = 0
@@ -171,7 +173,11 @@ for expname in exps_for_this_process[0:2]:
 
             g1_star, g2_star, T_star = measure_shear_of_ngmix_obs(star_obs,prefix,goodstar_index)
             g1_model, g2_model, T_model = measure_shear_of_ngmix_obs(psf_model_obs,prefix,goodstar_index)
-
+            #when g1_star and etc cannot be measured, do not output focal, ra etc
+            #but this cannot be the entire problem cause the number of nonzero ras and decs are pretty small
+            #print(g1_star, g2_star, T_star, g1_model,g2_model,T_model,ra,dec,'<-- g1,g2,T,g1,g2,T,ra,dec')
+            #ngmix_outputs = np.array([g1_star, g2_star, T_star, g1_model, g2_model, T_model])
+            
             tmp_focal_x[ig] = X_float+min_x
             tmp_focal_y[ig] = Y_float+min_y
             tmp_pix_x[ig] = X_float
@@ -184,42 +190,41 @@ for expname in exps_for_this_process[0:2]:
             tmp_g1_model[ig] = g1_model
             tmp_g2_model[ig] = g2_model
             tmp_T_model[ig] = T_model
-
-#            outputfile.write('%f %f %f %f %f %f %f %f %f %f %f %f\n'%(X_float+min_x, Y_float+min_y,
-#                                                                      X_float, Y_float,
-#                                                                      ra, dec,
-#                                                                      g1_star, g2_star, T_star,
-#                                                                      g1_model, g2_model, T_model))
             ig=ig+1
+            
+            #if ig>300:
+            #        pdb.set_trace()
 
-        focal_x = np.append(focal_x,tmp_focal_x)
-        focal_y = np.append(focal_y,tmp_focal_y)
-        pix_x = np.append(pix_x, tmp_pix_x)
-        pix_y = np.append(pix_y, tmp_pix_y)
-        ra = np.append(ra, tmp_ra)
-        dec = np.append(dec, tmp_dec)
-        g1_star = np.append(g1_star, tmp_g1_star)
-        g2_star = np.append(g2_star, tmp_g2_star)
-        T_star = np.append(T_star, tmp_T_star)
-        g1_model = np.append(g1_model, tmp_g1_model)
-        g2_model = np.append(g2_model, tmp_g2_model)
-        T_model = np.append(T_model, tmp_T_model) 
-        
+        focal_x_out = np.append(focal_x_out,tmp_focal_x)
+        focal_y_out = np.append(focal_y_out,tmp_focal_y)
+        pix_x_out = np.append(pix_x_out, tmp_pix_x)
+        pix_y_out = np.append(pix_y_out, tmp_pix_y)
+        ra_out = np.append(ra_out, tmp_ra)
+        dec_out = np.append(dec_out, tmp_dec)
+        g1_star_out = np.append(g1_star_out, tmp_g1_star)
+        g2_star_out = np.append(g2_star_out, tmp_g2_star)
+        T_star_out = np.append(T_star_out, tmp_T_star)
+        g1_model_out = np.append(g1_model_out, tmp_g1_model)
+        g2_model_out = np.append(g2_model_out, tmp_g2_model)
+        T_model_out = np.append(T_model_out, tmp_T_model) 
+        pdb.set_trace()
         #outputfile.close()
-    c1 = fits.Column(name='focal_x', array=focal_x, format='e')
-    c2 = fits.Column(name='focal_y', array=focal_y, format='e')
-    c3 = fits.Column(name='pix_x', array=pix_x, format='e')
-    c4 = fits.Column(name='pix_y', array=pix_y, format='e')
-    c5 = fits.Column(name='ra', array=ra, format='e')
-    c6 = fits.Column(name='dec', array=dec, format='e')
-    c7 = fits.Column(name='g1_star', array=g1_star, format='e')
-    c8 = fits.Column(name='g2_star', array=g2_star, format='e')
-    c9 = fits.Column(name='T_star', array=T_star, format='e')
-    c10 = fits.Column(name='g1_model', array=g1_model, format='e')
-    c11 = fits.Column(name='g2_model', array=g2_model, format='e')
-    c12 = fits.Column(name='T_model', array=T_model, format='e')
+
+        
+c1 = fits.Column(name='focal_x', array=focal_x_out, format='e')
+    c2 = fits.Column(name='focal_y', array=focal_y_out, format='e')
+    c3 = fits.Column(name='pix_x', array=pix_x_out, format='e')
+    c4 = fits.Column(name='pix_y', array=pix_y_out, format='e')
+    c5 = fits.Column(name='ra', array=ra_out, format='e')
+    c6 = fits.Column(name='dec', array=dec_out, format='e')
+    c7 = fits.Column(name='g1_star', array=g1_star_out, format='e')
+    c8 = fits.Column(name='g2_star', array=g2_star_out, format='e')
+    c9 = fits.Column(name='T_star', array=T_star_out, format='e')
+    c10 = fits.Column(name='g1_model', array=g1_model_out, format='e')
+    c11 = fits.Column(name='g2_model', array=g2_model_out, format='e')
+    c12 = fits.Column(name='T_model', array=T_model_out, format='e')
     t = fits.BinTableHDU.from_columns([c1,c2,c3,c4,c5,c6,c7,c8,c9,c10,c11,c12])
-    t.writeto(outputfile_name)
+    t.writeto(outputfile_name,overwrite=True)
     time2=time()
     print('PROCESS %d DONE: wrote %s to eg. %s (took %1.2f minutes)'%(PROCESS,prefix,outputfile_name,(time2-time1)/60.0))
     expnum = int(expname[3:])
