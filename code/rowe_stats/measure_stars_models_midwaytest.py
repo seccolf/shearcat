@@ -31,15 +31,15 @@ stampsize=24
 #prefix='/decade/decarchive/'
 
 def load_psf_and_image(path_to_image, name_of_image, path_to_psf, starlist, psfmodel):
-        image = galsim.fits.read(path_to_image+name_of_image)
-        weight = galsim.fits.read(path_to_image+name_of_image,hdu=3)
-        starlist = fits.open(path_to_psf+starlist)
-        des_psfex = galsim.des.DES_PSFEx(path_to_psf+psfmodel,path_to_image+name_of_image)
-        image_fits = fits.open(path_to_image+name_of_image)
-        wcs_pixel_world = WCS(image_fits[1].header) 
-        ccdcoords = findall(r'\d+',image_fits['sci'].header['detsec']) 
-        min_x_pix, min_y_pix = int(ccdcoords[0]),int(ccdcoords[2])       
-        return image, weight, starlist, des_psfex, wcs_pixel_world, min_x_pix, min_y_pix
+    image = galsim.fits.read(path_to_image+name_of_image)
+    weight = galsim.fits.read(path_to_image+name_of_image,hdu=3)
+    starlist = fits.open(path_to_psf+starlist)
+    des_psfex = galsim.des.DES_PSFEx(path_to_psf+psfmodel,path_to_image+name_of_image)
+    image_fits = fits.open(path_to_image+name_of_image)
+    wcs_pixel_world = WCS(image_fits[1].header) 
+    ccdcoords = findall(r'\d+',image_fits['sci'].header['detsec']) 
+    min_x_pix, min_y_pix = int(ccdcoords[0]),int(ccdcoords[2])       
+    return image, weight, starlist, des_psfex, wcs_pixel_world, min_x_pix, min_y_pix
 
 def get_psf_stars_index(starlist):
 	goodstars= np.where(starlist[2].data['flags_psf']==0)[0] 
@@ -47,33 +47,25 @@ def get_psf_stars_index(starlist):
 
 
 def measure_shear_of_ngmix_obs(obs,prefix,i):
-        am = Admom(rng=rng)
-        res = am.go(obs, 0.3)
-        if res['flags'] != 0:
-                print('admom flagged object %d in: %s with flags %s'%(i,prefix,flagstr(res['flags'])))
-        lm = LMSimple('gauss')
-        try:
-                lm_res = lm.go(obs, res['pars'])
-                if lm_res['flags'] == 0:
-                        g1 = lm_res['pars'][2]
-                        g2 = lm_res['pars'][3]
-                        T = lm_res['pars'][4]
-                        return g1, g2, T
-                else:
-                        print('lm flagged object %d in: %s with flags %s'%(i,prefix,flagstr(lm_res['flags'])))
-                        return np.nan, np.nan, np.nan
-        except:
-                print("ngmix error in object %d in: %s"%(i,prefix))
-                return np.nan, np.nan, np.nan
+    am = Admom(rng=rng)
+    res = am.go(obs, 0.3)
+    if res['flags'] != 0:
+            print('admom flagged object %d in: %s with flags %s'%(i,prefix,flagstr(res['flags'])))
+    lm = LMSimple('gauss')
+    try:
+            lm_res = lm.go(obs, res['pars'])
+            if lm_res['flags'] == 0:
+                    g1 = lm_res['pars'][2]
+                    g2 = lm_res['pars'][3]
+                    T = lm_res['pars'][4]
+                    return g1, g2, T
+            else:
+                    print('lm flagged object %d in: %s with flags %s'%(i,prefix,flagstr(lm_res['flags'])))
+                    return np.nan, np.nan, np.nan
+    except:
+            print("ngmix error in object %d in: %s"%(i,prefix))
+            return np.nan, np.nan, np.nan
 
-#        if lm_res['flags'] == 0:
-#                g1 = lm_res['pars'][2]
-#                g2 = lm_res['pars'][3]
-#                T = lm_res['pars'][4]
-#                return g1, g2, T
-#        else: 
-#                logging.info('lm flagged object %d in: '%i,prefix,' ',flagstr(res['flags']))
-#                return np.nan, np.nan, np.nan
 
 def get_band_name(subdirectories):
     if len(subdirectories)!=2:
@@ -207,11 +199,11 @@ for expname in exps_for_this_process[0:2]: #loops over exposures!
         g1_model_out = np.append(g1_model_out, tmp_g1_model)
         g2_model_out = np.append(g2_model_out, tmp_g2_model)
         T_model_out = np.append(T_model_out, tmp_T_model) 
+        print('should be done with one ccd')
         pdb.set_trace()
         #outputfile.close()
 
-        
-c1 = fits.Column(name='focal_x', array=focal_x_out, format='e')
+    c1 = fits.Column(name='focal_x', array=focal_x_out, format='e')
     c2 = fits.Column(name='focal_y', array=focal_y_out, format='e')
     c3 = fits.Column(name='pix_x', array=pix_x_out, format='e')
     c4 = fits.Column(name='pix_y', array=pix_y_out, format='e')
@@ -224,6 +216,8 @@ c1 = fits.Column(name='focal_x', array=focal_x_out, format='e')
     c11 = fits.Column(name='g2_model', array=g2_model_out, format='e')
     c12 = fits.Column(name='T_model', array=T_model_out, format='e')
     t = fits.BinTableHDU.from_columns([c1,c2,c3,c4,c5,c6,c7,c8,c9,c10,c11,c12])
+    print('should be done with one exposure')
+    pdb.set_trace() 
     t.writeto(outputfile_name,overwrite=True)
     time2=time()
     print('PROCESS %d DONE: wrote %s to eg. %s (took %1.2f minutes)'%(PROCESS,prefix,outputfile_name,(time2-time1)/60.0))
