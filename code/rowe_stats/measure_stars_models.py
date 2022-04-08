@@ -13,10 +13,10 @@ from astropy.io import fits
 from astropy.wcs import WCS
 import logging
 import pandas as pd
-from os import listdir,environ
+from os import listdir,environ,system
 from time import time
 from re import findall
-import pdb
+#import pdb
 #
 PROCESS = int(environ['SLURM_PROCID']) #process ID for a single cpu
 NTASKS = int(environ['SLURM_NTASKS']) #total number of processes running
@@ -76,6 +76,18 @@ def get_band_name(subdirectories):
         bandname = subdirectories[1]
     return bandname
 
+def delete_all_rsynced_files(location_del,expname_del):
+    location_of_stuff = location_del+expname_del+'/'    
+    if environ['DELETE_DIR']=='True':
+        command_del = 'rm -r '+location_of_stuff+'*'
+        command_del_dir = 'rmdir '+location_of_stuff
+        print('DELETE: ',command_del)
+        print('DELETE: ',command_del_dir)
+        system(command_del)
+        system(command_del_dir)
+    else:
+        print('Will not delete inputs in ',location_of_stuff)
+    
 #########SOME LOOP
 location = '/home/secco/project2-kicp-secco/delve/rowe_stats_files/'
 output_location = '/home/secco/project2-kicp-secco/delve/rowe_stats_measurements/'
@@ -85,7 +97,7 @@ number_of_exps = len(all_exposures)
 expnumber_shared = round(number_of_exps/NTASKS +0.5)
 exps_for_this_process= all_exposures[ int(PROCESS*expnumber_shared) : int((PROCESS+1)*expnumber_shared) ]
 print('PROCESS %d will take care of exposures '%PROCESS,exps_for_this_process)
-for expname in ['exp187649', 'exp213003','exp192948']:#exps_for_this_process[0:2]: #loops over exposures!
+for expname in exps_for_this_process: #loops over exposures!
     expnum = int(expname[3:])
     if expnum in np.loadtxt(output_location+'DONE_EXPS.txt'):
         print('PROCESS %d will not do exposure %s cause it was already done!'%(PROCESS,expname))
@@ -234,8 +246,9 @@ for expname in ['exp187649', 'exp213003','exp192948']:#exps_for_this_process[0:2
     track_whats_done = open(output_location+'DONE_EXPS.txt','a')
     track_whats_done.write(str(expnum)+'\n')
     track_whats_done.close()
-#NOW DELETE ALL FILES!
-
+    
+    #NOW DELETE ALL FILES!
+    delete_all_rsynced_files(location,expname)
 
 
 
