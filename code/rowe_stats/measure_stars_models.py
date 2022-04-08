@@ -106,6 +106,7 @@ for expname in exps_for_this_process: #loops over exposures!
     rootdir = location+expname+'/' #'/home/secco/project2-kicp-secco/delve/rowe_stats_files/exp145973/'
     band = get_band_name(listdir(rootdir)) #finds what band is in this exposure
     print('PROCESS %d doing %s (%s-band)'%(PROCESS,expname,band))  
+    outputfile_name =output_location+band+'/'+band+'band_'+expname+'.fits.fz'
 
     path_to_image = rootdir+band+'/' #exp145973/r/ for instance
     path_to_psf = rootdir+'psf_'+band+'/'#exp145973/psf_r/ for instance
@@ -120,7 +121,7 @@ for expname in exps_for_this_process: #loops over exposures!
         prefix = name_of_image[0:25] #the prefix containing expnum, band and ccdnum
         #print('doing ',prefix)
         #outputfile_name =output_location+band+'/'+band+'band_'+prefix[0:-1]+'.txt'
-        outputfile_name =output_location+band+'/'+band+'band_'+expname+'.fits.fz'
+        
 
         #outputfile = open(outputfile_name,'w')
         #outputfile.write('#focal_x focal_y pix_x pix_y ra dec g1_star g2_star T_star g1_model g2_model T_model\n')
@@ -241,7 +242,7 @@ for expname in exps_for_this_process: #loops over exposures!
     #print('should be done with one exposure')
     #pdb.set_trace() 
     t.writeto(outputfile_name,overwrite=True)
-    print('PROCESS %d DONE: wrote %s to eg. %s (took %1.2f minutes)'%(PROCESS,prefix,outputfile_name,time_it_took))
+    print('PROCESS %d DONE: wrote %s to  %s (took %1.2f minutes)'%(PROCESS,expname,outputfile_name,time_it_took))
 
     track_whats_done = open(output_location+'DONE_EXPS.txt','a')
     track_whats_done.write(str(expnum)+'\n')
