@@ -2,7 +2,7 @@
 #SBATCH --job-name=psf_kicp                                                                                                         
 #SBATCH --output=stdout/psf_kicp_%j.out                                                                             
 #SBATCH --error=stdout/psf_kicp_%j.err      
-#SBATCH --time=48:00:00                                                 
+#SBATCH --time=24:00:00                                                 
 #SBATCH --nodes=10                                                                     
 #SBATCH --ntasks-per-node=16   
 #SBATCH --cpus-per-task=1

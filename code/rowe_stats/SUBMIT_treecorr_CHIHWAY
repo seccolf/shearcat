@@ -8,8 +8,9 @@
 #SBATCH --cpus-per-task=40
 #SBATCH --exclusive      
 #SBATCH --partition=chihway                                                                 
-#SBATCH --account=pi-chihway                                                                                                                             
-source ~/SHEAR/mcal_sim_test/lucas_env/SOURCE_LUCAS
+#SBATCH --account=pi-chihway      
+                                                                                                             
+source /home/secco/SOURCE_treecorr          
 
 export NTASKS=$SLURM_NTASKS
 
