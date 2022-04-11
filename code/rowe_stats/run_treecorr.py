@@ -8,6 +8,15 @@ from os import listdir,environ
 #and each of which will run treecorr on a single band
 ###############
 
+#treecorr setup:
+############
+bslop= 3.0
+min_angle = 0.1 #arcmin
+max_angle = 250.0 #arcmin
+nbins = 25
+############
+
+#organize processes in nodes
 PROCESS = int(environ('SLURM_PROCID')) 
 band_dict = {1:'g', 2:'r', 3:'i', 4:'z'}
 band = band_dict[PROCESS]
@@ -44,13 +53,13 @@ q2 = g2_star-g2_model
 cat_q = treecorr.Catalog(g1=q1, g2=q2, ra=ra, dec=dec, ra_units='deg',dec_units='deg')
 cat_e = treecorr.Catalog(g1=g1_model, g2=g2_model, ra=ra, dec=dec, ra_units='deg',dec_units='deg')
 
-GG = treecorr.GGCorrelation(nbins=20,min_sep=0.1,max_sep=250.0,sep_units='arcmin',verbose=3,bin_slop=1.0)
+GG = treecorr.GGCorrelation(nbins=nbins,min_sep=min_angle,max_sep=max_angle,sep_units='arcmin',verbose=3,bin_slop=bslop)
 GG.process(cat_e)
-GG.write(location_of_output+'rho0_%sband_bslop%1._%dexposures.txt'%(band, bin_slop,len(all_exposures)))
+GG.write(location_of_output+'rho0_%sband_bslop%1.3f_%dexposures.txt'%(band, bslop,len(all_exposures)))
 print('Done rho0 in band %s'%band)
 GG.process(cat_q)
-GG.write(location_of_output+'rho1_%sband_bslop%1.2f_%dexposures.txt'%(band, bin_slop,len(all_exposures)))
+GG.write(location_of_output+'rho1_%sband_bslop%1.3f_%dexposures.txt'%(band, bslop,len(all_exposures)))
 print('Done rho1 in band %s'%band)
 GG.process(cat_e,cat_q)
-GG.write(location_of_output+'rho2_%sband_bslop%1.2f_%dexposures.txt'%(band, bin_slop,len(all_exposures)))
+GG.write(location_of_output+'rho2_%sband_bslop%1.3f_%dexposures.txt'%(band, bslop,len(all_exposures)))
 print('Done rho2 in band %s'%band)
