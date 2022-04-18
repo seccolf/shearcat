@@ -51,7 +51,7 @@ all_exposures_premasking = listdir(location_of_exposures)
 all_exposures = remove_exposures_by_teff(all_exposures_premasking,teff_threshold) #removes exposures with Teff<0.3
 print('Removed %1.2f%  of %s-band exposures based on Teff>%1.1f'%( 100*(1.0-len(all_exposures)/len(all_exposures_premasking)),band,teff_threshold),flush=True)
 #where to output?
-location_of_output = '/home/secco/SHEAR/shearcat/code/rowe_stats/ouput_rhos/'
+location_of_output = '/home/secco/SHEAR/shearcat/code/rowe_stats/output_rhos/'
 
 #combine all outputs into a single array
 ra = np.array([])
