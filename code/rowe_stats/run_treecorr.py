@@ -22,11 +22,8 @@ def remove_exposures_by_teff(list_of_exposures,threshold):
 	pass_mask = np.array([], dtype=bool)
 	for exp_name in list_of_exposures:
 		expnumber = int(re.findall(r'\d+',exp_name)[0])
-		print(exp_name, expnumber,'<-- testing')
 		true_or_false = expnumber in good_exposures.array 
-		print(true_or_false)
 		pass_mask=np.append(pass_mask,true_or_false)
-	print(pass_mask)
 	list_of_exposures = np.array(list_of_exposures)
 	return list_of_exposures[pass_mask]
 
@@ -50,7 +47,7 @@ print('PROCESS %d is running the %s-band'%(PROCESS,band),flush=True)
 location_of_exposures = '/home/secco/project2-kicp-secco/delve/rowe_stats_measurements/'+band+'/'
 all_exposures_premasking = listdir(location_of_exposures)
 all_exposures = remove_exposures_by_teff(all_exposures_premasking,teff_threshold) #removes exposures with Teff<0.3
-print('Removed %1.2f%  of %s-band exposures based on Teff>%1.1f'%( 100*(1.0-len(all_exposures)/len(all_exposures_premasking)),band,teff_threshold),flush=True)
+print('Removed %1.2f percent of %s-band exposures based on Teff>%1.1f'%( 100*(1.0-len(all_exposures)/len(all_exposures_premasking)),band,teff_threshold),flush=True)
 #where to output?
 location_of_output = '/home/secco/SHEAR/shearcat/code/rowe_stats/output_rhos/'
 
