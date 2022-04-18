@@ -4,6 +4,7 @@ from astropy.io import fits
 import sys
 from os import listdir,environ
 import pandas as pd
+import re
 ###############
 #this script assumes you'll star 4 slurm tasks(processes), each of which may have many CPUs
 #and each of which will run treecorr on a single band
