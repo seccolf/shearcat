@@ -24,13 +24,13 @@ NTASKS = int(environ['SLURM_NTASKS']) #total number of processes running
 #logging.basicConfig(filename='measurement.log', encoding='utf-8', level=logging.INFO, format='%(asctime)s %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p:')
 #RNG
 rng = np.random.RandomState(seed=666)
-stampsize=24
+stampsize=48
 
 #assume given image and psf paths:
 #finalcut = pd.read_csv('./finalcut_query.csv')
 #prefix='/decade/decarchive/'
 
-def load_psf_and_image(path_to_image, name_of_image, path_to_psf, starlist, psfmodel):
+def load_psf_and_image(path_to_image, name_of_image, path_to_psf, starlist, psfmodel,path_to_cat,name_of_cat):
     image = galsim.fits.read(path_to_image+name_of_image)
     weight = galsim.fits.read(path_to_image+name_of_image,hdu=3)
     starlist = fits.open(path_to_psf+starlist)
@@ -38,8 +38,35 @@ def load_psf_and_image(path_to_image, name_of_image, path_to_psf, starlist, psfm
     image_fits = fits.open(path_to_image+name_of_image)
     wcs_pixel_world = WCS(image_fits[1].header) 
     ccdcoords = findall(r'\d+',image_fits['sci'].header['detsec']) 
-    min_x_pix, min_y_pix = int(ccdcoords[0]),int(ccdcoords[2])       
-    return image, weight, starlist, des_psfex, wcs_pixel_world, min_x_pix, min_y_pix
+    min_x_pix, min_y_pix = int(ccdcoords[0]),int(ccdcoords[2])
+    cat = fits.open(path_to_cat+name_of_cat)       
+    return image, weight, starlist, des_psfex, wcs_pixel_world, min_x_pix, min_y_pix, cat
+
+def match_star_to_cat(starlist,cat):
+    good_index = get_psf_stars_index(starlist)
+    goodstars = starlist[2].data[good_index]
+    #now get the X and Y CCD coordinates of each of the "good" stars
+    X,Y = goodstars['x_image'],goodstars['y_image']
+    Xcat,Ycat = cat[2].data['x_image'],cat[2].data['y_image'] 
+    matched_star_indices=np.array([],dtype=int)
+    for x,y in zip(X,Y):
+        #will match stars in starlist by their X,Y position
+        wherex,wherey = np.isclose(x,Xcat,atol=0.1),np.isclose(y,Ycat,atol=0.1)
+        product = wherex*wherey
+        if np.sum(product)!=1: 
+            print('not ok')
+            continue
+        else:
+            matched_star_indices = np.append(matched_star_indices,np.where(product)[0])
+    return matched_star_indices
+
+
+def check_if_star_should_have_been_masked(starlist, cat):
+    #get the starlist entry, match it to sextractor catalog imaflags_iso and see if it has a mask
+    matched_star_indices = match_star_to_cat(starlist,cat)
+    matched_imaflags_iso = cat[2].data['imaflags_iso'][matched_star_indices]
+
+
 
 def get_psf_stars_index(starlist):
 	goodstars= np.where(starlist[2].data['flags_psf']==0)[0] 
@@ -49,8 +76,11 @@ def get_psf_stars_index(starlist):
 def measure_shear_of_ngmix_obs(obs,prefix,i):
     am = Admom(rng=rng)
     res = am.go(obs, 0.3)
+    pdb.set_trace()#understand what's inside res
     #if res['flags'] != 0:
+
     #        print('admom flagged object %d in: %s with flags %s'%(i,prefix,flagstr(res['flags'])))
+    '''
     lm = LMSimple('gauss')
     try:
             lm_res = lm.go(obs, res['pars'])
@@ -65,15 +95,19 @@ def measure_shear_of_ngmix_obs(obs,prefix,i):
     except:
             #print("ngmix error in object %d in: %s"%(i,prefix))
             return np.nan, np.nan, np.nan
+    '''
+
 
 
 def get_band_name(subdirectories):
-    if len(subdirectories)!=2:
-        raise ValueError('Did not find only psf_X/ and X/ subdirectories here')
+    if len(subdirectories)!=3:
+        raise ValueError('Did not find only psf_X/ and X/ and cat_X/ subdirectories here')
     if len(subdirectories[0])==1:
         bandname = subdirectories[0] #assumes the images are in a directory called simply 'g' or 'r' for instance!
+    if len(subdirectories[1])==1:
+        bandname = subdirectories[0]
     else:
-        bandname = subdirectories[1]
+        bandname = subdirectories[2]
     return bandname
 
 def delete_all_rsynced_files(location_del,expname_del):
@@ -110,6 +144,7 @@ for expname in exps_for_this_process: #loops over exposures!
 
     path_to_image = rootdir+band+'/' #exp145973/r/ for instance
     path_to_psf = rootdir+'psf_'+band+'/'#exp145973/psf_r/ for instance
+    path_to_cat = rootdir+'cat_'+band+'/'#exp145973/cat_r/ for instance
     time1=time()
     #now initiate some arrays where the outputs will be appended, then eventually written to fits
     focal_x_out, focal_y_out = np.array([]), np.array([])
@@ -127,11 +162,15 @@ for expname in exps_for_this_process: #loops over exposures!
         #outputfile.write('#focal_x focal_y pix_x pix_y ra dec g1_star g2_star T_star g1_model g2_model T_model\n')
         starlist = prefix+'psfex-starlist.fits'
         psfmodel = prefix+'psfexcat.psf'
-        image, weight, starlist, des_psfex, wcs_pixel_world, min_x, min_y = load_psf_and_image(path_to_image,
+        name_of_cat = prefix+'red-fullcat.fits'
+
+        image, weight, starlist, des_psfex, wcs_pixel_world, min_x, min_y,cat = load_psf_and_image(path_to_image,
                                                                 name_of_image,
                                                                 path_to_psf,
                                                                 starlist,
-                                                                psfmodel)
+                                                                psfmodel,
+                                                                path_to_cat,
+                                                                name_of_cat)
         goodstar=get_psf_stars_index(starlist)
         Ngoodstar = len(goodstar)
         tmp_focal_x, tmp_focal_y = np.ones(Ngoodstar), np.ones(Ngoodstar)

@@ -28,10 +28,12 @@ for expnum in expnums[start:end]:
         selected = exposures[exposures['EXPNUM']==expnum]
         path_to_im = prefix+selected['PATH'].item()+'/'
         path_to_psf = prefix+selected['PATH.1'].item()+'/'
+        path_to_cat = prefix+selected['PATH.1'].item()[0:-3]+'cat/'
         basedir = location+'exp'+str(expnum)
         basedir_image = basedir+'/'+band+'/'
         basedir_psf = basedir+'/psf_'+band+'/'
-        createdirs = 'mkdir '+basedir+' '+basedir_image+' '+basedir_psf
+        basedir_cat = basedir+'/cat_'+band+'/'
+        createdirs = 'mkdir '+basedir+' '+basedir_image+' '+basedir_psf+' '+basedir_cat
         #print(createdirs)
         os.system(createdirs)
         logging.info('Downloading exposure %d images (%s-band)...'%(expnum,band))
@@ -44,11 +46,16 @@ for expnum in expnums[start:end]:
         #print(rsync_command_im)        
         os.system(rsync_command_im) 
         time2=time()
-        logging.info('... took %1.2f minutes'%((time2-time1)/60.0))
+        #logging.info('... took %1.2f minutes'%((time2-time1)/60.0))
         #print('... took %1.2f minutes'%((time2-time1)/60.0))
         rsync_command_psf = 'rsync -a lsecco@deslogin.cosmology.illinois.edu:'+path_to_psf+' '+basedir_psf
         os.system(rsync_command_psf)	
         time3=time()
-        logging.info('Total download time including psf files for exposure %d is %1.2f minutes\n'%(expnum, (time3-time1)/60.0))
+        #logging.info('Total download time including psf files for exposure %d is %1.2f minutes\n'%(expnum, (time3-time1)/60.0))
+        #print('Total download time including psf files for exposure %d is %1.2f minutes\n'%(expnum, (time3-time1)/60.0))
+        rsync_command_cat = 'rsync -a lsecco@deslogin.cosmology.illinois.edu:'+path_to_cat+' '+basedir_cat
+        os.system(rsync_command_cat)    
+        time4=time()
+        logging.info('Total download time including cat,im,psf files for exposure %d is %1.2f minutes\n'%(expnum, (time4-time1)/60.0))
         #print('Total download time including psf files for exposure %d is %1.2f minutes\n'%(expnum, (time3-time1)/60.0))
 
