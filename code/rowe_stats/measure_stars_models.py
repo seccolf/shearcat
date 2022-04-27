@@ -42,22 +42,24 @@ def load_psf_and_image(path_to_image, name_of_image, path_to_psf, starlist, psfm
     cat = fits.open(path_to_cat+name_of_cat)       
     return image, weight, starlist, des_psfex, wcs_pixel_world, min_x_pix, min_y_pix, cat
 
-def match_star_to_cat(starlist,cat):
+def match_star_to_cat(starlist,cat,pixeldistance=0.25):
     good_index = get_psf_stars_index(starlist)
     goodstars = starlist[2].data[good_index]
     #now get the X and Y CCD coordinates of each of the "good" stars
     X,Y = goodstars['x_image'],goodstars['y_image']
     Xcat,Ycat = cat[2].data['x_image'],cat[2].data['y_image'] 
     matched_star_indices=np.array([],dtype=int)
+    match_fail=0
     for x,y in zip(X,Y):
         #will match stars in starlist by their X,Y position
-        wherex,wherey = np.isclose(x,Xcat,atol=0.1),np.isclose(y,Ycat,atol=0.1)
+        wherex,wherey = np.isclose(x,Xcat,atol=pixeldistance),np.isclose(y,Ycat,atol=pixeldistance)
         product = wherex*wherey
         if np.sum(product)!=1: 
-            print('not ok')
+            match_fail=match_fail+1
             continue
         else:
             matched_star_indices = np.append(matched_star_indices,np.where(product)[0])
+    print('Failed to find a match in the sextractor fullcat for %1.2f percent of the starlist stars'%(100*len(match_fail)/len(good_index)))
     return matched_star_indices
 
 
@@ -65,8 +67,13 @@ def check_if_star_should_have_been_masked(starlist, cat):
     #get the starlist entry, match it to sextractor catalog imaflags_iso and see if it has a mask
     matched_star_indices = match_star_to_cat(starlist,cat)
     matched_imaflags_iso = cat[2].data['imaflags_iso'][matched_star_indices]
+    print('Flags found for matched stars:',np.unique(matched_imaflags_iso))
+    return 0
 
-
+def get_flux_auto_from_cat(starlist,cat):
+    matched_star_indices = match_star_to_cat(starlist,cat)
+    matched_flux_auto = cat[2].data['flux_auto'][matched_star_indices]
+    return matched_flux_auto
 
 def get_psf_stars_index(starlist):
 	goodstars= np.where(starlist[2].data['flags_psf']==0)[0] 
