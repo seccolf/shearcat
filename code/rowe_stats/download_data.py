@@ -21,8 +21,9 @@ box_select = (df['RADEG']>120.0)*(df['RADEG']<250.0)*(df['DECDEG']>-40.0)*(df['D
 final_select = band_select*box_select
 exposures=df[final_select]# apply total masking
 expnums = exposures['EXPNUM']
-
+expnums = expnums.sample(frac=1,random_state=42) #randomizes expnums
 prefix = '/decade/decarchive/'
+
 for expnum in expnums[start:end]:
         time1=time()
         selected = exposures[exposures['EXPNUM']==expnum]
@@ -49,11 +50,13 @@ for expnum in expnums[start:end]:
         #logging.info('... took %1.2f minutes'%((time2-time1)/60.0))
         #print('... took %1.2f minutes'%((time2-time1)/60.0))
         rsync_command_psf = 'rsync -a lsecco@deslogin.cosmology.illinois.edu:'+path_to_psf+' '+basedir_psf
+        logging.info(rsync_command_psf)
         os.system(rsync_command_psf)	
         time3=time()
         #logging.info('Total download time including psf files for exposure %d is %1.2f minutes\n'%(expnum, (time3-time1)/60.0))
         #print('Total download time including psf files for exposure %d is %1.2f minutes\n'%(expnum, (time3-time1)/60.0))
         rsync_command_cat = 'rsync -a lsecco@deslogin.cosmology.illinois.edu:'+path_to_cat+' '+basedir_cat
+        logging.info(rsync_command_cat)
         os.system(rsync_command_cat)    
         time4=time()
         logging.info('Total download time including cat,im,psf files for exposure %d is %1.2f minutes\n'%(expnum, (time4-time1)/60.0))
