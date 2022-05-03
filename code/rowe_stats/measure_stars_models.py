@@ -16,7 +16,7 @@ import pandas as pd
 from os import listdir,environ,system
 from time import time
 from re import findall
-#import pdb
+import pdb
 #
 PROCESS = int(environ['SLURM_PROCID']) #process ID for a single cpu
 NTASKS = int(environ['SLURM_NTASKS']) #total number of processes running
@@ -94,8 +94,10 @@ def measure_shear_of_ngmix_obs(obs,prefix,i):
     am = Admom(rng=rng)
     res = am.go(obs, 0.3)
     pdb.set_trace()#understand what's inside res
-    #if res['flags'] != 0:
-
+    if res['flags'] != 0:
+        return np.nan, np.nan, np.nan
+    else:
+        return res['e1'],res['e2'],res['T']
     #        print('admom flagged object %d in: %s with flags %s'%(i,prefix,flagstr(res['flags'])))
     '''
     lm = LMSimple('gauss')
@@ -148,7 +150,7 @@ number_of_exps = len(all_exposures)
 expnumber_shared = round(number_of_exps/NTASKS +0.5)
 exps_for_this_process= all_exposures[ int(PROCESS*expnumber_shared) : int((PROCESS+1)*expnumber_shared) ]
 print('PROCESS %d will take care of exposures '%PROCESS,exps_for_this_process)
-for expname in exps_for_this_process: #loops over exposures!
+for expname in exps_for_this_process[0:2]: #loops over exposures!
     expnum = int(expname[3:])
     if expnum in np.loadtxt(output_location+'DONE_EXPS.txt'):
         print('PROCESS %d will not do exposure %s cause it was already done!'%(PROCESS,expname))
@@ -194,6 +196,10 @@ for expname in exps_for_this_process: #loops over exposures!
         pdb.set_trace()
         if Ngoodstar<100:
             print('This ccd has less than 100 PSF stars: flag it.')
+            flag_bad_ccds = open(output_location+'FLAGGED_CCDS.txt','a')
+            flag_bad_ccds.write(name_of_image+'\n')
+            flag_bad_ccds.close()
+
          #returns stars that have psf_flags==0 and for which a match has been found
         tmp_focal_x, tmp_focal_y =np.array([]), np.array([])
         tmp_pix_x, tmp_pix_y = np.array([]), np.array([])
@@ -212,7 +218,7 @@ for expname in exps_for_this_process: #loops over exposures!
             Y_float = starlist[2].data['y_image'][goodstar_index]
 
             #first, check if this star with PSF_FLAGS==0 has a match in the sextractor catalog:
-            location_in_catalog = get_index_of_star_in_full_catalog(X_float,Y_float,cat,pixeldistance=1.0)
+            location_in_catalog = get_index_of_star_in_full_catalog(X_float,Y_float,cat,pixeldistance=1.0)[0]
             pdb.set_trace()
             if np.isnan(location_in_catalog):
                 print('Did not find a match for this star')
