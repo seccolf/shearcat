@@ -191,6 +191,7 @@ for expname in exps_for_this_process: #loops over exposures!
                                                                 name_of_cat)
         goodstar=get_psf_stars_index(starlist)
         Ngoodstar = len(goodstar)
+        pdb.set_trace()
         if Ngoodstar<100:
             print('This ccd has less than 100 PSF stars: flag it.')
          #returns stars that have psf_flags==0 and for which a match has been found
@@ -212,6 +213,7 @@ for expname in exps_for_this_process: #loops over exposures!
 
             #first, check if this star with PSF_FLAGS==0 has a match in the sextractor catalog:
             location_in_catalog = get_index_of_star_in_full_catalog(X_float,Y_float,cat,pixeldistance=1.0)
+            pdb.set_trace()
             if np.isnan(location_in_catalog):
                 print('Did not find a match for this star')
                 continue
