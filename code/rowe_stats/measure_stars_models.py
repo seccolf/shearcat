@@ -71,7 +71,11 @@ def get_index_of_star_in_full_catalog(Xstar,Ystar,cat,pixeldistance=1.0):
     if np.sum(product)!=1: 
             return np.nan
     else:
-        return np.where(product)[0] #this is the index IN THE FULL CATALOG of the star with coords Xstar, Ystar
+        indout = np.where(product)[0] #this is the index IN THE FULL CATALOG of the star with coords Xstar, Ystar
+        if np.isscalar(indout):
+            return indout
+        else:
+            return indout[0]
     
 def check_if_star_should_have_been_masked(starlist, cat):
     #get the starlist entry, match it to sextractor catalog imaflags_iso and see if it has a mask
@@ -93,7 +97,7 @@ def get_psf_stars_index(starlist):
 def measure_shear_of_ngmix_obs(obs,prefix,i):
     am = Admom(rng=rng)
     res = am.go(obs, 0.3)
-    pdb.set_trace()#understand what's inside res
+    #pdb.set_trace()#understand what's inside res
     if res['flags'] != 0:
         return np.nan, np.nan, np.nan
     else:
@@ -115,6 +119,9 @@ def measure_shear_of_ngmix_obs(obs,prefix,i):
             #print("ngmix error in object %d in: %s"%(i,prefix))
             return np.nan, np.nan, np.nan
     '''
+
+def measure_hsm_shear():
+    
 
 
 
@@ -193,7 +200,7 @@ for expname in exps_for_this_process[0:2]: #loops over exposures!
                                                                 name_of_cat)
         goodstar=get_psf_stars_index(starlist)
         Ngoodstar = len(goodstar)
-        pdb.set_trace()
+        #pdb.set_trace()
         if Ngoodstar<100:
             print('This ccd has less than 100 PSF stars: flag it.')
             flag_bad_ccds = open(output_location+'FLAGGED_CCDS.txt','a')
@@ -218,8 +225,9 @@ for expname in exps_for_this_process[0:2]: #loops over exposures!
             Y_float = starlist[2].data['y_image'][goodstar_index]
 
             #first, check if this star with PSF_FLAGS==0 has a match in the sextractor catalog:
-            location_in_catalog = get_index_of_star_in_full_catalog(X_float,Y_float,cat,pixeldistance=1.0)[0]
-            pdb.set_trace()
+            location_in_catalog = get_index_of_star_in_full_catalog(X_float,Y_float,cat,pixeldistance=1.0)
+            #print('location_in_catalog=',location_in_catalog)
+            #pdb.set_trace()
             if np.isnan(location_in_catalog):
                 print('Did not find a match for this star')
                 continue
