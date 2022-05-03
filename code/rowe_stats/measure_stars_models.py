@@ -42,7 +42,7 @@ def load_psf_and_image(path_to_image, name_of_image, path_to_psf, starlist, psfm
     cat = fits.open(path_to_cat+name_of_cat)       
     return image, weight, starlist, des_psfex, wcs_pixel_world, min_x_pix, min_y_pix, cat
 
-def match_star_to_cat(starlist,cat,pixeldistance=0.25):
+def match_star_to_cat(starlist,cat,pixeldistance=1.0):
     good_index = get_psf_stars_index(starlist)
     goodstars = starlist[2].data[good_index]
     #now get the X and Y CCD coordinates of each of the "good" stars
@@ -62,7 +62,17 @@ def match_star_to_cat(starlist,cat,pixeldistance=0.25):
     print('Failed to find a match in the sextractor fullcat for %1.2f percent of the starlist stars'%(100*len(match_fail)/len(good_index)))
     return matched_star_indices
 
+def get_index_of_star_in_full_catalog(Xstar,Ystar,cat,pixeldistance=1.0):
+    #get the X and Y of all objects in catalog and compare with the input
+    Xcat,Ycat = cat[2].data['x_image'],cat[2].data['y_image'] 
 
+    wherex,wherey = np.isclose(Xstar,Xcat,atol=pixeldistance),np.isclose(Ystar,Ycat,atol=pixeldistance) 
+    product = wherex*wherey 
+    if np.sum(product)!=1: 
+            return np.nan
+    else:
+        return np.where(product)[0] #this is the index IN THE FULL CATALOG of the star with coords Xstar, Ystar
+    
 def check_if_star_should_have_been_masked(starlist, cat):
     #get the starlist entry, match it to sextractor catalog imaflags_iso and see if it has a mask
     matched_star_indices = match_star_to_cat(starlist,cat)
@@ -158,6 +168,7 @@ for expname in exps_for_this_process: #loops over exposures!
     pix_x_out, pix_y_out = np.array([]), np.array([])
     ra_out, dec_out = np.array([]), np.array([])
     g1_star_out, g2_star_out, T_star_out, g1_model_out, g2_model_out, T_model_out = np.array([]), np.array([]),np.array([]), np.array([]),np.array([]), np.array([])
+    mag_auto_out, imaflags_iso_out = np.array([]),np.array([])
     N_failed_stars = 0
     for name_of_image in listdir(path_to_image): #loops over the CCDs of an exposure!
         prefix = name_of_image[0:25] #the prefix containing expnum, band and ccdnum
@@ -180,14 +191,18 @@ for expname in exps_for_this_process: #loops over exposures!
                                                                 name_of_cat)
         goodstar=get_psf_stars_index(starlist)
         Ngoodstar = len(goodstar)
-        tmp_focal_x, tmp_focal_y = np.ones(Ngoodstar), np.ones(Ngoodstar)
-        tmp_pix_x, tmp_pix_y = np.ones(Ngoodstar), np.ones(Ngoodstar)
-        tmp_ra, tmp_dec = np.ones(Ngoodstar), np.ones(Ngoodstar)
-        tmp_g1_star, tmp_g2_star, tmp_T_star = np.ones(Ngoodstar), np.ones(Ngoodstar), np.ones(Ngoodstar) 
-        tmp_g1_model, tmp_g2_model, tmp_T_model = np.ones(Ngoodstar), np.ones(Ngoodstar), np.ones(Ngoodstar)
-
+        if Ngoodstar<100:
+            print('This ccd has less than 100 PSF stars: flag it.')
+         #returns stars that have psf_flags==0 and for which a match has been found
+        tmp_focal_x, tmp_focal_y =np.array([]), np.array([])
+        tmp_pix_x, tmp_pix_y = np.array([]), np.array([])
+        tmp_ra, tmp_dec = np.array([]), np.array([])
+        tmp_g1_star, tmp_g2_star, tmp_T_star = np.array([]), np.array([]), np.array([])
+        tmp_g1_model, tmp_g2_model, tmp_T_model = np.array([]), np.array([]), np.array([])
+        tmp_mag_auto = np.array([])
+        tmp_imaflags_iso = np.array([])
         #print('found %d stars that pass flags'%len(goodstar))
-        ig = 0
+        #ig = 0
         for goodstar_index in goodstar:
 
             X = starlist[2].data['x_image'].astype(int)[goodstar_index] 
@@ -195,8 +210,17 @@ for expname in exps_for_this_process: #loops over exposures!
             X_float = starlist[2].data['x_image'][goodstar_index] #getting them as floats also (as in the file itself)
             Y_float = starlist[2].data['y_image'][goodstar_index]
 
+            #first, check if this star with PSF_FLAGS==0 has a match in the sextractor catalog:
+            location_in_catalog = get_index_of_star_in_full_catalog(X_float,Y_float,cat,pixeldistance=1.0)
+            if np.isnan(location_in_catalog):
+                print('Did not find a match for this star')
+                continue
+            #if a match was found, get flags and mag_auto
+            IMAFLAG_ISO=cat[2].data['imaflags_iso'][location_in_catalog]
+            MAG_AUTO = cat[2].data['mag_auto'][location_in_catalog]
+            
+            #now continue: re-bound the image around theright location
             newbounds = galsim.BoundsI(X-stampsize/2,X+stampsize/2,Y-stampsize/2,Y+stampsize/2)
-
             image_cutout = image[newbounds].array
             weight_cutout = weight[newbounds].array
 
@@ -214,7 +238,7 @@ for expname in exps_for_this_process: #loops over exposures!
             ra,dec = wcs_pixel_world.pixel_to_world_values(X_float, Y_float)
             ra = ra.item()
             dec=dec.item()
-            
+
             #now create the ngmix observations
             star_obs = ngmix.Observation(
             	image=image_cutout,
@@ -235,20 +259,20 @@ for expname in exps_for_this_process: #loops over exposures!
             if np.any(np.isnan(ngmix_outputs)):
                 N_failed_stars=N_failed_stars+1
 
-            tmp_focal_x[ig] = X_float+min_x
-            tmp_focal_y[ig] = Y_float+min_y
-            tmp_pix_x[ig] = X_float
-            tmp_pix_y[ig] = Y_float
-            tmp_ra[ig] = ra
-            tmp_dec[ig] = dec
-            tmp_g1_star[ig] = g1_star
-            tmp_g2_star[ig] = g2_star
-            tmp_T_star[ig] = T_star
-            tmp_g1_model[ig] = g1_model
-            tmp_g2_model[ig] = g2_model
-            tmp_T_model[ig] = T_model
-            ig=ig+1
-            
+            tmp_focal_x = np.append(tmp_focal_x, X_float+min_x)
+            tmp_focal_y = np.append(tmp_focal_y, Y_float+min_y)
+            tmp_pix_x = np.append(tmp_pix_x, X_float)
+            tmp_pix_y = np.append(tmp_pix_y, Y_float)
+            tmp_ra = np.append(tmp_ra, ra)
+            tmp_dec = np.append(tmp_dec, dec)
+            tmp_g1_star = np.append(tmp_g1_star, g1_star)
+            tmp_g2_star = np.append(tmp_g2_star, g2_star)
+            tmp_T_star = np.append(tmp_T_star, T_star)
+            tmp_g1_model = np.append(tmp_g1_model, g1_model)
+            tmp_g2_model = np.append(tmp_g2_model, g2_model)
+            tmp_T_model = np.append(tmp_T_model, T_model)
+            tmp_mag_auto = np.append(tmp_mag_auto, MAG_AUTO)
+            tmp_imaflags_iso = np.append(tmp_imaflags_iso, IMAFLAG_ISO)
             #if ig>300:
             #        pdb.set_trace()
 
@@ -264,6 +288,8 @@ for expname in exps_for_this_process: #loops over exposures!
         g1_model_out = np.append(g1_model_out, tmp_g1_model)
         g2_model_out = np.append(g2_model_out, tmp_g2_model)
         T_model_out = np.append(T_model_out, tmp_T_model) 
+        imaflags_iso_out = np.append(imaflags_iso_out, tmp_imaflags_iso) 
+        mag_auto_out = np.append(mag_auto_out, tmp_mag_auto) 
         #print('should be done with one ccd')
         #pdb.set_trace()
         #outputfile.close()
@@ -280,7 +306,9 @@ for expname in exps_for_this_process: #loops over exposures!
     c10 = fits.Column(name='g1_model', array=g1_model_out, format='e')
     c11 = fits.Column(name='g2_model', array=g2_model_out, format='e')
     c12 = fits.Column(name='T_model', array=T_model_out, format='e')
-    t = fits.BinTableHDU.from_columns([c1,c2,c3,c4,c5,c6,c7,c8,c9,c10,c11,c12])
+    c13 = fits.Column(name='IMAFLAGS_ISO', array=imaflags_iso_out, format='e')
+    c14 = fits.Column(name='MAG_AUTO', array=mag_auto_out, format='e')
+    t = fits.BinTableHDU.from_columns([c1,c2,c3,c4,c5,c6,c7,c8,c9,c10,c11,c12,c13,c14])
     time2=time()
     t.header['FAILED']=(N_failed_stars, 'number of failed ngmix measurements')
     time_it_took = (time2-time1)/60.0
@@ -295,7 +323,8 @@ for expname in exps_for_this_process: #loops over exposures!
     track_whats_done.close()
     
     #NOW DELETE ALL FILES!
-    delete_all_rsynced_files(location,expname)
+    if environ['DELETE_DIR']=='True':
+        delete_all_rsynced_files(location,expname)
 
 
 
