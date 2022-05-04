@@ -180,7 +180,7 @@ for expname in exps_for_this_process[0:2]: #loops over exposures!
     g1_star_out, g2_star_out, T_star_out, g1_model_out, g2_model_out, T_model_out = np.array([]), np.array([]),np.array([]), np.array([]),np.array([]), np.array([])
     mag_auto_out, imaflags_iso_out = np.array([]),np.array([])
     N_failed_stars = 0
-    for name_of_image in listdir(path_to_image)[0:1]: #loops over the CCDs of an exposure!
+    for name_of_image in listdir(path_to_image)[0:2]: #loops over the CCDs of an exposure!
         prefix = name_of_image[0:25] #the prefix containing expnum, band and ccdnum
         #print('doing ',prefix)
         #outputfile_name =output_location+band+'/'+band+'band_'+prefix[0:-1]+'.txt'
@@ -219,7 +219,7 @@ for expname in exps_for_this_process[0:2]: #loops over exposures!
         tmp_imaflags_iso = np.array([])
         #print('found %d stars that pass flags'%len(goodstar))
         #ig = 0
-        for goodstar_index in goodstar[0]:
+        for goodstar_index in goodstar[0:2]:
 
             X = starlist[2].data['x_image'].astype(int)[goodstar_index] 
             Y = starlist[2].data['y_image'].astype(int)[goodstar_index]
@@ -245,12 +245,12 @@ for expname in exps_for_this_process[0:2]: #loops over exposures!
             print('Trying HSM')
             hsm_in_im = image[newbounds]
             hsm_in_wt = weight[newbounds]
-            print(hsm_in_im)
-            print(hsm_in_wt)
-            print(im.wcs.isPixelScale())
-            shape_data = hsm_in_im.FindAdaptiveMom(weight=wt, strict=False)
-            print(shape_data)
-
+            print('hsm_in_im=',hsm_in_im)
+            print('\nhsm_in_wt=',hsm_in_wt)
+            print('\nhsm_in_im.wcs.isPixelScale()=',hsm_in_im.wcs.isPixelScale())
+            shape_data = hsm_in_im.FindAdaptiveMom(weight=hsm_in_wt, strict=False)
+            print('\nshape_data=',shape_data)
+            print('DONE hsm')
 
 
             #position where we want the PSF
