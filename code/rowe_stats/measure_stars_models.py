@@ -120,11 +120,34 @@ def measure_shear_of_ngmix_obs(obs,prefix,i):
             return np.nan, np.nan, np.nan
     '''
 
-#def measure_hsm_shear(input_im):
+def measure_hsm_shear(im, wt):
+    MAX_CENTROID_SHIFT=1.0 #1 pixel recentering at most
+    shape_data = im.FindAdaptiveMom(weight=wt, strict=False) #might need to turn on strict
+    if shape_data.moments_status == 0:
+        dx = shape_data.moments_centroid.x - im.true_center.x
+        dy = shape_data.moments_centroid.y - im.true_center.y
+        if dx**2 + dy**2 > MAX_CENTROID_SHIFT**2:
+            print('cetroid changed by too much in HSM, will return nan')
+            return np.nan, np.nan, np.nan
+        else:
+            e1 = shape_data.observed_shape.e1
+            e2 = shape_data.observed_shape.e2
+            s = shape_data.moments_sigma
+            jac = im.wcs.jacobian(im.true_center)
+            M = np.matrix( [[ 1 + e1, e2 ], [ e2, 1 - e1 ]] ) * s*s
+            J = jac.getMatrix()
+            M = J * M * J.T
 
-    
+            e1 = (M[0,0] - M[1,1]) / (M[0,0] + M[1,1])
+            e2 = (2.*M[0,1]) / (M[0,0] + M[1,1])
+            T = M[0,0] + M[1,1]
 
-
+            shear = galsim.Shear(e1=e1, e2=e2)
+            g1 = shear.g1
+            g2 = shear.g2
+            return g1, g2, T
+    else:
+        return np.nan, np.nan, np.nan 
 
 def get_band_name(subdirectories):
     if len(subdirectories)!=3:
@@ -242,16 +265,6 @@ for expname in exps_for_this_process[0:2]: #loops over exposures!
             image_cutout = image[newbounds].array
             weight_cutout = weight[newbounds].array
 
-            print('Trying HSM')
-            hsm_in_im = image[newbounds]
-            hsm_in_wt = weight[newbounds]
-            print('hsm_in_im=',hsm_in_im)
-            print('\nhsm_in_wt=',hsm_in_wt)
-            print('\nhsm_in_im.wcs.isPixelScale()=',hsm_in_im.wcs.isPixelScale())
-            shape_data = hsm_in_im.FindAdaptiveMom(weight=hsm_in_wt, strict=False)
-            print('\nshape_data=',shape_data)
-            print('DONE hsm')
-
 
             #position where we want the PSF
             psf_pos = galsim.PositionD(X, Y)
@@ -259,6 +272,9 @@ for expname in exps_for_this_process[0:2]: #loops over exposures!
 
             copy_stamp = image[newbounds].copy() #copies the galsim object with wcs and everything
             psf_image=psf_model.drawImage(image=copy_stamp,method='no_pixel')
+
+
+
             psf_cutout = psf_image.array
 
             #get the wcs at the location 
@@ -281,6 +297,14 @@ for expname in exps_for_this_process[0:2]: #loops over exposures!
 
             g1_star, g2_star, T_star = measure_shear_of_ngmix_obs(star_obs,prefix,goodstar_index)
             g1_model, g2_model, T_model = measure_shear_of_ngmix_obs(psf_model_obs,prefix,goodstar_index)
+            g1_star_hsm, g2_star_hsm, T_star_hsm = measure_hsm_shear(hsm_input_im, hsm_input_wt)
+            g1_model_hsm, g2_model_hsm, T_model_hsm = measure_hsm_shear(psf_image,None)
+ 
+            print('g1_star, g2_star, T_star = ',g1_star, g2_star, T_star)
+            print('g1_model, g2_model, T_model =',g1_model, g2_model, T_model)
+            print('g1_star_hsm, g2_star_hsm, T_star_hsm =',g1_star_hsm, g2_star_hsm, T_star_hsm)
+            print('g1_model_hsm, g2_model_hsm, T_model_hsm =',g1_model_hsm, g2_model_hsm, T_model_hsm)
+
             #when g1_star and etc cannot be measured, do not output focal, ra etc
             #but this cannot be the entire problem cause the number of nonzero ras and decs are pretty small
             #print(g1_star, g2_star, T_star, g1_model,g2_model,T_model,ra,dec,'<-- g1,g2,T,g1,g2,T,ra,dec')
