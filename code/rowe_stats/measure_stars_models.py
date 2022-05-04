@@ -268,6 +268,8 @@ for expname in exps_for_this_process[0:2]: #loops over exposures!
             image_cutout = image[newbounds].array
             weight_cutout = weight[newbounds].array
 
+            hsm_input_im = image[newbounds]
+            hsm_input_wt = weight[newbounds]
 
             #position where we want the PSF
             psf_pos = galsim.PositionD(X, Y)
