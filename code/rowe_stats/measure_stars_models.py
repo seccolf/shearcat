@@ -120,7 +120,8 @@ def measure_shear_of_ngmix_obs(obs,prefix,i):
             return np.nan, np.nan, np.nan
     '''
 
-def measure_hsm_shear():
+#def measure_hsm_shear(input_im):
+
     
 
 
@@ -179,7 +180,7 @@ for expname in exps_for_this_process[0:2]: #loops over exposures!
     g1_star_out, g2_star_out, T_star_out, g1_model_out, g2_model_out, T_model_out = np.array([]), np.array([]),np.array([]), np.array([]),np.array([]), np.array([])
     mag_auto_out, imaflags_iso_out = np.array([]),np.array([])
     N_failed_stars = 0
-    for name_of_image in listdir(path_to_image): #loops over the CCDs of an exposure!
+    for name_of_image in listdir(path_to_image)[0:1]: #loops over the CCDs of an exposure!
         prefix = name_of_image[0:25] #the prefix containing expnum, band and ccdnum
         #print('doing ',prefix)
         #outputfile_name =output_location+band+'/'+band+'band_'+prefix[0:-1]+'.txt'
@@ -206,6 +207,7 @@ for expname in exps_for_this_process[0:2]: #loops over exposures!
             flag_bad_ccds = open(output_location+'FLAGGED_CCDS.txt','a')
             flag_bad_ccds.write(name_of_image+'\n')
             flag_bad_ccds.close()
+            continue
 
          #returns stars that have psf_flags==0 and for which a match has been found
         tmp_focal_x, tmp_focal_y =np.array([]), np.array([])
@@ -217,7 +219,7 @@ for expname in exps_for_this_process[0:2]: #loops over exposures!
         tmp_imaflags_iso = np.array([])
         #print('found %d stars that pass flags'%len(goodstar))
         #ig = 0
-        for goodstar_index in goodstar:
+        for goodstar_index in goodstar[0]:
 
             X = starlist[2].data['x_image'].astype(int)[goodstar_index] 
             Y = starlist[2].data['y_image'].astype(int)[goodstar_index]
@@ -239,6 +241,17 @@ for expname in exps_for_this_process[0:2]: #loops over exposures!
             newbounds = galsim.BoundsI(X-stampsize/2,X+stampsize/2,Y-stampsize/2,Y+stampsize/2)
             image_cutout = image[newbounds].array
             weight_cutout = weight[newbounds].array
+
+            print('Trying HSM')
+            hsm_in_im = image[newbounds]
+            hsm_in_wt = weight[newbounds]
+            print(hsm_in_im)
+            print(hsm_in_wt)
+            print(im.wcs.isPixelScale())
+            shape_data = hsm_in_im.FindAdaptiveMom(weight=wt, strict=False)
+            print(shape_data)
+
+
 
             #position where we want the PSF
             psf_pos = galsim.PositionD(X, Y)
