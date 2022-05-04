@@ -201,6 +201,7 @@ for expname in exps_for_this_process[0:2]: #loops over exposures!
     pix_x_out, pix_y_out = np.array([]), np.array([])
     ra_out, dec_out = np.array([]), np.array([])
     g1_star_out, g2_star_out, T_star_out, g1_model_out, g2_model_out, T_model_out = np.array([]), np.array([]),np.array([]), np.array([]),np.array([]), np.array([])
+    g1_star_hsm_out, g2_star_hsm_out, T_star_hsm_out, g1_model_hsm_out, g2_model_hsm_out, T_model_hsm_out = np.array([]), np.array([]),np.array([]), np.array([]),np.array([]), np.array([])
     mag_auto_out, imaflags_iso_out = np.array([]),np.array([])
     N_failed_stars = 0
     for name_of_image in listdir(path_to_image)[0:2]: #loops over the CCDs of an exposure!
@@ -238,6 +239,8 @@ for expname in exps_for_this_process[0:2]: #loops over exposures!
         tmp_ra, tmp_dec = np.array([]), np.array([])
         tmp_g1_star, tmp_g2_star, tmp_T_star = np.array([]), np.array([]), np.array([])
         tmp_g1_model, tmp_g2_model, tmp_T_model = np.array([]), np.array([]), np.array([])
+        tmp_g1_star_hsm, tmp_g2_star_hsm, tmp_T_star_hsm = np.array([]), np.array([]), np.array([])
+        tmp_g1_model_hsm, tmp_g2_model_hsm, tmp_T_model_hsm = np.array([]), np.array([]), np.array([])
         tmp_mag_auto = np.array([])
         tmp_imaflags_iso = np.array([])
         #print('found %d stars that pass flags'%len(goodstar))
@@ -324,6 +327,14 @@ for expname in exps_for_this_process[0:2]: #loops over exposures!
             tmp_g1_model = np.append(tmp_g1_model, g1_model)
             tmp_g2_model = np.append(tmp_g2_model, g2_model)
             tmp_T_model = np.append(tmp_T_model, T_model)
+            
+            tmp_g1_star_hsm = np.append(tmp_g1_star_hsm, g1_star_hsm)
+            tmp_g2_star_hsm = np.append(tmp_g2_star_hsm, g2_star_hsm)
+            tmp_T_star_hsm = np.append(tmp_T_star_hsm, T_star_hsm)
+            tmp_g1_model_hsm = np.append(tmp_g1_model_hsm, g1_model_hsm)
+            tmp_g2_model_hsm = np.append(tmp_g2_model_hsm, g2_model_hsm)
+            tmp_T_model_hsm = np.append(tmp_T_model_hsm, T_model_hsm)
+            
             tmp_mag_auto = np.append(tmp_mag_auto, MAG_AUTO)
             tmp_imaflags_iso = np.append(tmp_imaflags_iso, IMAFLAG_ISO)
             #if ig>300:
@@ -341,6 +352,14 @@ for expname in exps_for_this_process[0:2]: #loops over exposures!
         g1_model_out = np.append(g1_model_out, tmp_g1_model)
         g2_model_out = np.append(g2_model_out, tmp_g2_model)
         T_model_out = np.append(T_model_out, tmp_T_model) 
+
+        g1_star_hsm_out = np.append(g1_star_hsm_out, tmp_g1_star_hsm)
+        g2_star_hsm_out = np.append(g2_star_hsm_out, tmp_g2_star_hsm)
+        T_star_hsm_out = np.append(T_star_hsm_out, tmp_T_star_hsm)
+        g1_model_hsm_out = np.append(g1_model_hsm_out, tmp_g1_model_hsm)
+        g2_model_hsm_out = np.append(g2_model_hsm_out, tmp_g2_model_hsm)
+        T_model_hsm_out = np.append(T_model_hsm_out, tmp_T_model_hsm) 
+
         imaflags_iso_out = np.append(imaflags_iso_out, tmp_imaflags_iso) 
         mag_auto_out = np.append(mag_auto_out, tmp_mag_auto) 
         #print('should be done with one ccd')
@@ -359,9 +378,17 @@ for expname in exps_for_this_process[0:2]: #loops over exposures!
     c10 = fits.Column(name='g1_model', array=g1_model_out, format='e')
     c11 = fits.Column(name='g2_model', array=g2_model_out, format='e')
     c12 = fits.Column(name='T_model', array=T_model_out, format='e')
-    c13 = fits.Column(name='IMAFLAGS_ISO', array=imaflags_iso_out, format='e')
-    c14 = fits.Column(name='MAG_AUTO', array=mag_auto_out, format='e')
-    t = fits.BinTableHDU.from_columns([c1,c2,c3,c4,c5,c6,c7,c8,c9,c10,c11,c12,c13,c14])
+
+    c13 = fits.Column(name='g1_star_hsm', array=g1_star_hsm_out, format='e')
+    c14 = fits.Column(name='g2_star_hsm', array=g2_star_hsm_out, format='e')
+    c15 = fits.Column(name='T_star_hsm', array=T_star_hsm_out, format='e')
+    c16 = fits.Column(name='g1_model_hsm', array=g1_model_hsm_out, format='e')
+    c17 = fits.Column(name='g2_model_hsm', array=g2_model_hsm_out, format='e')
+    c18 = fits.Column(name='T_model_hsm', array=T_model_hsm_out, format='e')
+
+    c19 = fits.Column(name='IMAFLAGS_ISO', array=imaflags_iso_out, format='e')
+    c20 = fits.Column(name='MAG_AUTO', array=mag_auto_out, format='e')
+    t = fits.BinTableHDU.from_columns([c1,c2,c3,c4,c5,c6,c7,c8,c9,c10,c11,c12,c13,c14,c15,c16,c17,c18,c19,c20])
     time2=time()
     t.header['FAILED']=(N_failed_stars, 'number of failed ngmix measurements')
     time_it_took = (time2-time1)/60.0
