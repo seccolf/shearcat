@@ -59,7 +59,7 @@ def match_star_to_cat(starlist,cat,pixeldistance=1.0):
             continue
         else:
             matched_star_indices = np.append(matched_star_indices,np.where(product)[0])
-    print('Failed to find a match in the sextractor fullcat for %1.2f percent of the starlist stars'%(100*len(match_fail)/len(good_index)))
+    print('Failed to find a match in the sextractor fullcat for %1.2f percent of the starlist stars'%(100*len(match_fail)/len(good_index)),flush=True)
     return matched_star_indices
 
 def get_index_of_star_in_full_catalog(Xstar,Ystar,cat,pixeldistance=1.0):
@@ -81,7 +81,7 @@ def check_if_star_should_have_been_masked(starlist, cat):
     #get the starlist entry, match it to sextractor catalog imaflags_iso and see if it has a mask
     matched_star_indices = match_star_to_cat(starlist,cat)
     matched_imaflags_iso = cat[2].data['imaflags_iso'][matched_star_indices]
-    print('Flags found for matched stars:',np.unique(matched_imaflags_iso))
+    print('Flags found for matched stars:',np.unique(matched_imaflags_iso),flush=True)
     return 0
 
 def get_flux_auto_from_cat(starlist,cat):
@@ -127,7 +127,7 @@ def measure_hsm_shear(im, wt):
         dx = shape_data.moments_centroid.x - im.true_center.x
         dy = shape_data.moments_centroid.y - im.true_center.y
         if dx**2 + dy**2 > MAX_CENTROID_SHIFT**2:
-            print('cetroid changed by too much in HSM, will return nan')
+            #print('cetroid changed by too much in HSM, will return nan',flush=True)
             return np.nan, np.nan, np.nan
         else:
             e1 = shape_data.observed_shape.e1
@@ -155,8 +155,8 @@ def get_band_name(subdirectories):
     if len(subdirectories[0])==1:
         bandname = subdirectories[0] #assumes the images are in a directory called simply 'g' or 'r' for instance!
     if len(subdirectories[1])==1:
-        bandname = subdirectories[0]
-    else:
+        bandname = subdirectories[1]
+    if len(subdirectories[2])==1:
         bandname = subdirectories[2]
     return bandname
 
@@ -165,12 +165,12 @@ def delete_all_rsynced_files(location_del,expname_del):
     if environ['DELETE_DIR']=='True':
         command_del = 'rm -r '+location_of_stuff+'*'
         command_del_dir = 'rmdir '+location_of_stuff
-        print('DELETE: ',command_del)
-        print('DELETE: ',command_del_dir)
+        print('DELETE: ',command_del,flush=True)
+        print('DELETE: ',command_del_dir,flush=True)
         system(command_del)
         system(command_del_dir)
     else:
-        print('Will not delete inputs in ',location_of_stuff)
+        print('Will not delete inputs in ',location_of_stuff,flush=True)
     
 #########SOME LOOP
 location = '/home/secco/project2-kicp-secco/delve/rowe_stats_files/'
@@ -180,16 +180,16 @@ number_of_exps = len(all_exposures)
 
 expnumber_shared = round(number_of_exps/NTASKS +0.5)
 exps_for_this_process= all_exposures[ int(PROCESS*expnumber_shared) : int((PROCESS+1)*expnumber_shared) ]
-print('PROCESS %d will take care of exposures '%PROCESS,exps_for_this_process)
+print('PROCESS %d will take care of exposures '%PROCESS,exps_for_this_process,flush=True)
 for expname in exps_for_this_process[0:2]: #loops over exposures!
     expnum = int(expname[3:])
     if expnum in np.loadtxt(output_location+'DONE_EXPS.txt'):
-        print('PROCESS %d will not do exposure %s cause it was already done!'%(PROCESS,expname))
+        print('PROCESS %d will not do exposure %s cause it was already done!'%(PROCESS,expname),flush=True)
         continue
     #LOOP OF THE TYPE "for expname in exps_for_this_process"
     rootdir = location+expname+'/' #'/home/secco/project2-kicp-secco/delve/rowe_stats_files/exp145973/'
     band = get_band_name(listdir(rootdir)) #finds what band is in this exposure
-    print('PROCESS %d doing %s (%s-band)'%(PROCESS,expname,band))  
+    print('PROCESS %d doing %s (%s-band)'%(PROCESS,expname,band),flush=True)  
     outputfile_name =output_location+band+'/'+band+'band_'+expname+'.fits.fz'
 
     path_to_image = rootdir+band+'/' #exp145973/r/ for instance
@@ -204,7 +204,9 @@ for expname in exps_for_this_process[0:2]: #loops over exposures!
     g1_star_hsm_out, g2_star_hsm_out, T_star_hsm_out, g1_model_hsm_out, g2_model_hsm_out, T_model_hsm_out = np.array([]), np.array([]),np.array([]), np.array([]),np.array([]), np.array([])
     mag_auto_out, imaflags_iso_out = np.array([]),np.array([])
     N_failed_stars = 0
-    for name_of_image in listdir(path_to_image)[0:2]: #loops over the CCDs of an exposure!
+    N_failed_CCDS = 0
+    N_not_matched = 0
+    for name_of_image in listdir(path_to_image): #loops over the CCDs of an exposure!
         prefix = name_of_image[0:25] #the prefix containing expnum, band and ccdnum
         #print('doing ',prefix)
         #outputfile_name =output_location+band+'/'+band+'band_'+prefix[0:-1]+'.txt'
@@ -227,10 +229,11 @@ for expname in exps_for_this_process[0:2]: #loops over exposures!
         Ngoodstar = len(goodstar)
         #pdb.set_trace()
         if Ngoodstar<100:
-            print('This ccd has less than 100 PSF stars: flag it.')
+            print('CCD %s has less than 100 PSF stars: flagged.'%name_of_image,flush=True)
             flag_bad_ccds = open(output_location+'FLAGGED_CCDS.txt','a')
             flag_bad_ccds.write(name_of_image+'\n')
             flag_bad_ccds.close()
+            N_failed_CCDS=N_failed_CCDS+1
             continue
 
          #returns stars that have psf_flags==0 and for which a match has been found
@@ -245,7 +248,7 @@ for expname in exps_for_this_process[0:2]: #loops over exposures!
         tmp_imaflags_iso = np.array([])
         #print('found %d stars that pass flags'%len(goodstar))
         #ig = 0
-        for goodstar_index in goodstar[0:2]:
+        for goodstar_index in goodstar:
 
             X = starlist[2].data['x_image'].astype(int)[goodstar_index] 
             Y = starlist[2].data['y_image'].astype(int)[goodstar_index]
@@ -257,7 +260,8 @@ for expname in exps_for_this_process[0:2]: #loops over exposures!
             #print('location_in_catalog=',location_in_catalog)
             #pdb.set_trace()
             if np.isnan(location_in_catalog):
-                print('Did not find a match for this star')
+                #print('Did not find a sextractor match for this star',flush=True)
+                N_not_matched=N_not_matched+1
                 continue
             #if a match was found, get flags and mag_auto
             IMAFLAG_ISO=cat[2].data['imaflags_iso'][location_in_catalog]
@@ -267,10 +271,13 @@ for expname in exps_for_this_process[0:2]: #loops over exposures!
             newbounds = galsim.BoundsI(X-stampsize/2,X+stampsize/2,Y-stampsize/2,Y+stampsize/2)
             image_cutout = image[newbounds].array
             weight_cutout = weight[newbounds].array
+            weight_cutout[weight_cutout<0.0]=0.0
 
             hsm_input_im = image[newbounds]
             hsm_input_wt = weight[newbounds]
-
+            hsm_input_wt.array[hsm_input_wt.array<0.0]=0.0
+            #if np.any(weight_cutout<0.0):
+            #    pdb.set_trace()
             #position where we want the PSF
             psf_pos = galsim.PositionD(X, Y)
             psf_model = des_psfex.getPSF(psf_pos)
@@ -305,10 +312,10 @@ for expname in exps_for_this_process[0:2]: #loops over exposures!
             g1_star_hsm, g2_star_hsm, T_star_hsm = measure_hsm_shear(hsm_input_im, hsm_input_wt)
             g1_model_hsm, g2_model_hsm, T_model_hsm = measure_hsm_shear(psf_image,None)
  
-            print('g1_star, g2_star, T_star = ',g1_star, g2_star, T_star)
-            print('g1_model, g2_model, T_model =',g1_model, g2_model, T_model)
-            print('g1_star_hsm, g2_star_hsm, T_star_hsm =',g1_star_hsm, g2_star_hsm, T_star_hsm)
-            print('g1_model_hsm, g2_model_hsm, T_model_hsm =',g1_model_hsm, g2_model_hsm, T_model_hsm)
+            #print('g1_star, g2_star, T_star = ',g1_star, g2_star, T_star)
+            #print('g1_model, g2_model, T_model =',g1_model, g2_model, T_model)
+            #print('g1_star_hsm, g2_star_hsm, T_star_hsm =',g1_star_hsm, g2_star_hsm, T_star_hsm)
+            #print('g1_model_hsm, g2_model_hsm, T_model_hsm =',g1_model_hsm, g2_model_hsm, T_model_hsm)
 
             #when g1_star and etc cannot be measured, do not output focal, ra etc
             #but this cannot be the entire problem cause the number of nonzero ras and decs are pretty small
@@ -392,13 +399,15 @@ for expname in exps_for_this_process[0:2]: #loops over exposures!
     c20 = fits.Column(name='MAG_AUTO', array=mag_auto_out, format='e')
     t = fits.BinTableHDU.from_columns([c1,c2,c3,c4,c5,c6,c7,c8,c9,c10,c11,c12,c13,c14,c15,c16,c17,c18,c19,c20])
     time2=time()
-    t.header['FAILED']=(N_failed_stars, 'number of failed ngmix measurements')
+    t.header['FAILED_stars']=(N_failed_stars, 'number of failed ngmix measurements')
+    t.header['FAILED_ccds']=(N_failed_CCDS, 'number of failed ccds')
+    t.header['FAILED_nomatch']=(N_not_matched, 'number of stars not matched to sextractor cat')
     time_it_took = (time2-time1)/60.0
     t.header['RUNTIME'] = ( time_it_took, 'minutes to run this exposure' )
     #print('should be done with one exposure')
     #pdb.set_trace() 
     t.writeto(outputfile_name,overwrite=True)
-    print('PROCESS %d DONE: wrote %s to  %s (took %1.2f minutes)'%(PROCESS,expname,outputfile_name,time_it_took))
+    print('PROCESS %d DONE: wrote %s to  %s (took %1.2f minutes)'%(PROCESS,expname,outputfile_name,time_it_took),flush=True)
 
     track_whats_done = open(output_location+'DONE_EXPS.txt','a')
     track_whats_done.write(str(expnum)+'\n')
