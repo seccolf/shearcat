@@ -21,12 +21,28 @@ pix_x = np.array([])
 pix_y = np.array([])
 ra = np.array([])
 dec = np.array([])
+
 g1_star = np.array([])
 g1_model = np.array([])
 T_star = np.array([])
 g2_star = np.array([])
 g2_model = np.array([])
 T_model = np.array([]) 
+
+g1_star_hsm = np.array([])
+g1_model_hsm = np.array([])
+T_star_hsm = np.array([])
+g2_star_hsm = np.array([])
+g2_model_hsm = np.array([])
+T_model_hsm = np.array([]) 
+
+MAG_AUTO = np.array([])
+IMAFLAGS_ISO = np.array([])
+
+N_failed_stars = 0
+N_failed_CCDS = 0
+N_failed_match = 0 
+
 for expame in all_exposures:
 	f = fits.open(location_of_exposures+expame)
 	focal_x = np.append(focal_x, f[1].data['focal_x'])
@@ -42,6 +58,20 @@ for expame in all_exposures:
 	g2_star = np.append(g2_star, f[1].data['g2_star'])
 	g2_model = np.append(g2_model, f[1].data['g2_model'])
 
+	g1_star_hsm = np.append(g1_star_hsm, f[1].data['g1_star_hsm'])
+	g1_model_hsm = np.append(g1_model_hsm, f[1].data['g1_model_hsm'])
+	T_star_hsm = np.append(T_star_hsm, f[1].data['T_star_hsm'])
+	T_model_hsm = np.append(T_model_hsm, f[1].data['T_model_hsm'])
+	g2_star_hsm = np.append(g2_star_hsm, f[1].data['g2_star_hsm'])
+	g2_model_hsm = np.append(g2_model_hsm, f[1].data['g2_model_hsm'])
+
+	MAG_AUTO = np.append(MAG_AUTO,f[1].data['MAG_AUTO'])
+	IMAFLAGS_ISO = np.append(IMAFLAGS_ISO,f[1].data['IMAFLAGS_ISO'])
+
+	N_failed_stars = N_failed_stars + f[1].header['FAILED_stars']
+	N_failed_CCDS = N_failed_CCDS + f[1].header['FAILED_ccds']
+	N_failed_match = N_failed_match + f[1].header['FAILED_nomatch']
+
 print('Total number of objects for %d exposures in band %s: %d'%(len(all_exposures),band,len(ra)),flush=True)
 
 c1 = fits.Column(name='focal_x', array=focal_x, format='e')
@@ -56,9 +86,22 @@ c9 = fits.Column(name='T_star', array=T_star, format='e')
 c10 = fits.Column(name='g1_model', array=g1_model, format='e')
 c11 = fits.Column(name='g2_model', array=g2_model, format='e')
 c12 = fits.Column(name='T_model', array=T_model, format='e')
-t = fits.BinTableHDU.from_columns([c1,c2,c3,c4,c5,c6,c7,c8,c9,c10,c11,c12])
+
+c13 = fits.Column(name='g1_star_hsm', array=g1_star_hsm, format='e')
+c14 = fits.Column(name='g2_star_hsm', array=g2_star_hsm, format='e')
+c15 = fits.Column(name='T_star_hsm', array=T_star_hsm, format='e')
+c16 = fits.Column(name='g1_model_hsm', array=g1_model_hsm, format='e')
+c17 = fits.Column(name='g2_model_hsm', array=g2_model_hsm, format='e')
+c18 = fits.Column(name='T_model_hsm', array=T_model_hsm, format='e')
+
+c19 = fits.Column(name='MAG_AUTO', array=MAG_AUTO, format='e')
+c20 = fits.Column(name='IMAFLAGS_ISO', array=IMAFLAGS_ISO, format='e')
+
+t = fits.BinTableHDU.from_columns([c1,c2,c3,c4,c5,c6,c7,c8,c9,c10,c11,c12,c13,c14,c15,c16,c17,c18,c19,c20])
 #time2=time()
-#t.header['FAILED']=(N_failed_stars, 'number of failed ngmix measurements')
+t.header['FAILED_stars']=(N_failed_stars, 'number of failed ngmix measurements')
+t.header['FAILED_ccds']=(N_failed_CCDS, 'number of failed ccds (<100 stars)')
+t.header['FAILED_nomatch']=(N_failed_match, 'number of stars not matched to sextractor cat')
 #time_it_took = (time2-time1)/60.0
 #t.header['RUNTIME'] = ( time_it_took, 'minutes to run this exposure' )
 #print('should be done with one exposure')
