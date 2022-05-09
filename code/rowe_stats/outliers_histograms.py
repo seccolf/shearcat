@@ -3,22 +3,26 @@ import numpy as np
 from astropy.io import fits
 
 
-do_both_together= False
+do_both_together= True
 do_focalplane = False
 do_y1_histograms = False
-do_stack_chips = True 
+do_stack_chips = False 
 
+use_hsm=True #look for HSM columns if true
+
+
+naming = '_May9th_hsm'
 
 if do_stack_chips:
 	for band in ['g', 'r', 'i', 'z']:		
 		if band=='g':
-			f = fits.open('gband_1995exps.fits.fz')
+			f = fits.open('gband_500exps.fits.fz')
 		if band=='r':
-			f = fits.open('rband_2058exps.fits.fz')
+			f = fits.open('rband_500exps.fits.fz')
 		if band=='i':
-			f = fits.open('iband_1992exps.fits.fz')
+			f = fits.open('iband_500exps.fits.fz')
 		if band=='z':
-			f = fits.open('zband_1990exps.fits.fz')
+			f = fits.open('zband_500exps.fits.fz')
 
 		g1s,g2s,Ts = f[1].data['g1_star'], f[1].data['g2_star'], f[1].data['T_star']
 		g1m,g2m,Tm = f[1].data['g1_model'], f[1].data['g2_model'], f[1].data['T_model']
@@ -37,7 +41,7 @@ if do_stack_chips:
 		pl.ylabel('X',fontsize=16)
 		pl.colorbar(label='Number of flagged (good) stars')
 		pl.tight_layout()
-		pl.savefig('figures/'+band+'band_stacked_chips.png',dpi=100) 
+		pl.savefig('figures/'+band+'band_stacked_chips+naming.png',dpi=100) 
 		pl.show()
 
 
@@ -61,19 +65,23 @@ if do_both_together:
 		dg2_des = g2s_des-g2m_des
 
 		if band=='g':
-			g = fits.open('gband_1995exps.fits.fz')
+			g = fits.open('gband_500exps.fits.fz')
 		if band=='r':
-			g = fits.open('rband_2058exps.fits.fz')
+			g = fits.open('rband_500exps.fits.fz')
 		if band=='i':
-			g = fits.open('iband_1992exps.fits.fz')
+			g = fits.open('iband_500exps.fits.fz')
 		if band=='z':
-			g = fits.open('zband_1990exps.fits.fz')
+			g = fits.open('zband_500exps.fits.fz')
 
-		g1s,g2s,Ts = g[1].data['g1_star'], g[1].data['g2_star'], g[1].data['T_star']
-		g1m,g2m,Tm = g[1].data['g1_model'], g[1].data['g2_model'], g[1].data['T_model']
+		if use_hsm:
+			g1s,g2s,Ts = g[1].data['g1_star_hsm'], g[1].data['g2_star_hsm'], g[1].data['T_star_hsm']
+			g1m,g2m,Tm = g[1].data['g1_model_hsm'], g[1].data['g2_model_hsm'], g[1].data['T_model_hsm']
+		else:	
+			g1s,g2s,Ts = g[1].data['g1_star'], g[1].data['g2_star'], g[1].data['T_star']
+			g1m,g2m,Tm = g[1].data['g1_model'], g[1].data['g2_model'], g[1].data['T_model']
 
-		modelfail=np.isnan(g1m)*np.isnan(g2m)*np.isnan(Tm)
-		starfail=np.isnan(g1s)*np.isnan(g2s)*np.isnan(Ts)
+		modelfail=np.isnan(g1m)+np.isnan(g2m)+np.isnan(Tm)
+		starfail=np.isnan(g1s)+np.isnan(g2s)+np.isnan(Ts)
 		mask = modelfail+starfail
 		#~mask is "not mask"
 		g1s = g1s[~mask]
@@ -158,7 +166,7 @@ if do_both_together:
 		
 		
 		pl.tight_layout()
-		pl.savefig('figures/'+band+'band_comparison_with_DESY1.png',dpi=300)
+		pl.savefig('figures/'+band+'band_comparison_with_DESY1'+naming+'.png',dpi=300)
 		#pl.show()
 
 
@@ -175,8 +183,8 @@ if do_y1_histograms:
 		g1s,g2s,Ts = f[1].data['e1'][mask], f[1].data['e2'][mask], f[1].data['size'][mask]
 		g1m,g2m,Tm = f[1].data['psf_e1'][mask], f[1].data['psf_e2'][mask], f[1].data['psf_size'][mask]
 
-		modelfail=np.isnan(g1m)*np.isnan(g2m)*np.isnan(Tm)
-		starfail=np.isnan(g1s)*np.isnan(g2s)*np.isnan(Ts)
+		modelfail=np.isnan(g1m)+np.isnan(g2m)+np.isnan(Tm)
+		starfail=np.isnan(g1s)+np.isnan(g2s)+np.isnan(Ts)
 		mask = modelfail+starfail
 		#~mask is "not mask"
 		g1s = g1s[~mask]
@@ -250,7 +258,7 @@ if do_y1_histograms:
 		
 		
 		pl.tight_layout()
-		pl.savefig('figures/'+band+'band_1Dhists_DESY1.png',dpi=300)
+		pl.savefig('figures/'+band+'band_1Dhists_DESY1'+naming+'.png',dpi=300)
 		pl.show()
 
 
@@ -267,13 +275,13 @@ if do_focalplane:
 
 	for band in ['g', 'r', 'i', 'z']:		
 		if band=='g':
-			f = fits.open('gband_1995exps.fits.fz')
+			f = fits.open('gband_500exps.fits.fz')
 		if band=='r':
-			f = fits.open('rband_2058exps.fits.fz')
+			f = fits.open('rband_500exps.fits.fz')
 		if band=='i':
-			f = fits.open('iband_1992exps.fits.fz')
+			f = fits.open('iband_500exps.fits.fz')
 		if band=='z':
-			f = fits.open('zband_1990exps.fits.fz')
+			f = fits.open('zband_500exps.fits.fz')
 
 		g1s,g2s,Ts = f[1].data['g1_star'], f[1].data['g2_star'], f[1].data['T_star']
 		g1m,g2m,Tm = f[1].data['g1_model'], f[1].data['g2_model'], f[1].data['T_model']
@@ -353,7 +361,7 @@ if do_focalplane:
 		
 		
 		pl.tight_layout()
-		pl.savefig('figures/'+band+'band_1Dhists.png',dpi=600)
+		pl.savefig('figures/'+band+'band_1Dhists'+naming+'.png',dpi=600)
 		pl.show()
 
 

@@ -4,16 +4,17 @@ from astropy.io import fits
 
 BINS=150
 
-band='g'
+band='z'
+hsm=True
 
 if band=='g':
-	f = fits.open('gband_1995exps.fits.fz')
+	f = fits.open('gband_500exps.fits.fz')
 if band=='r':
-	f = fits.open('rband_2058exps.fits.fz')
+	f = fits.open('rband_500exps.fits.fz')
 if band=='i':
-	f = fits.open('iband_1992exps.fits.fz',memmap=False)
+	f = fits.open('iband_500exps.fits.fz',memmap=False)
 if band=='z':
-	f = fits.open('zband_1990exps.fits.fz')
+	f = fits.open('zband_500exps.fits.fz')
 
 e1min,e1max = -0.05,0.05
 e2min,e2max = -0.05,0.05
@@ -22,13 +23,20 @@ dg1min, dg1max = -0.005, 0.005
 dg2min, dg2max = -0.005, 0.005
 dTmin, dTmax = -0.02, 0.02
 
+if hsm:
+	focal_x,focal_y = f[1].data['focal_x'],f[1].data['focal_y'] 
+	g1s,g2s,Ts = f[1].data['g1_star_hsm'], f[1].data['g2_star_hsm'], f[1].data['T_star_hsm']
+	g1m,g2m,Tm = f[1].data['g1_model_hsm'], f[1].data['g2_model_hsm'], f[1].data['T_model_hsm']
+	outputfigure_name = band+'_focalplane_500exps_hsm.png'
+else:
+	focal_x,focal_y = f[1].data['focal_x'],f[1].data['focal_y'] 
+	g1s,g2s,Ts = f[1].data['g1_star'], f[1].data['g2_star'], f[1].data['T_star']
+	g1m,g2m,Tm = f[1].data['g1_model'], f[1].data['g2_model'], f[1].data['T_model']
+	outputfigure_name = 'figures/'+band+'_focalplane_500exps.png'
 
-focal_x,focal_y = f[1].data['focal_x'],f[1].data['focal_y'] 
-g1s,g2s,Ts = f[1].data['g1_star'], f[1].data['g2_star'], f[1].data['T_star']
-g1m,g2m,Tm = f[1].data['g1_model'], f[1].data['g2_model'], f[1].data['T_model']
 
-modelfail=np.isnan(g1m)*np.isnan(g2m)*np.isnan(Tm)
-starfail=np.isnan(g1s)*np.isnan(g2s)*np.isnan(Ts)
+modelfail=np.isnan(g1m)+np.isnan(g2m)+np.isnan(Tm)
+starfail=np.isnan(g1s)+np.isnan(g2s)+np.isnan(Ts)
 mask = modelfail+starfail
 #~mask is "not mask"
 focal_x = focal_x[~mask]
@@ -108,5 +116,5 @@ pl.colorbar()
 
 
 pl.tight_layout()
-pl.savefig(band+'_focalplane.png',dpi=600)
+pl.savefig(outputfigure_name,dpi=600)
 pl.show()
