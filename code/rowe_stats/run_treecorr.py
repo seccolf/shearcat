@@ -42,8 +42,11 @@ PROCESS = int(environ['SLURM_PROCID'])
 band_dict = {0:'g', 1:'r', 2:'i', 3:'z'}
 band = band_dict[PROCESS]
 print('PROCESS %d is running the %s-band'%(PROCESS,band),flush=True)
+location_of_output = '/home/secco/SHEAR/shearcat/code/rowe_stats/output_rhos/'
 
-if combined_file_exists=True:
+combined_file_exists=True
+
+if combined_file_exists==True:
 	if band=='g':
 		f = fits.open('/home/secco/project2-kicp-secco/delve/rowe_stats_measurements/gband_500exps.fits.fz')
 	if band=='r':
@@ -66,14 +69,13 @@ if combined_file_exists=True:
 
 
 
-if combined_file_exists=False:
+if combined_file_exists==False:
 	#find files
 	location_of_exposures = '/home/secco/project2-kicp-secco/delve/rowe_stats_measurements/'+band+'/'
 	all_exposures_premasking = listdir(location_of_exposures)
 	all_exposures = remove_exposures_by_teff(all_exposures_premasking,teff_threshold) #removes exposures with Teff<0.3
 	print('Removed %1.2f percent of %s-band exposures based on Teff>%1.1f'%( 100*(1.0-len(all_exposures)/len(all_exposures_premasking)),band,teff_threshold),flush=True)
 	#where to output?
-	location_of_output = '/home/secco/SHEAR/shearcat/code/rowe_stats/output_rhos/'
 
 	#combine all outputs into a single array
 	ra = np.array([])
