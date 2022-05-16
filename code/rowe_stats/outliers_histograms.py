@@ -21,7 +21,7 @@ if do_size_histograms_per_exposure:
 	i_measurements_location ='/home/secco/project2-kicp-secco/delve/rowe_stats_measurements/i'
 	z_measurements_location ='/home/secco/project2-kicp-secco/delve/rowe_stats_measurements/z'
 
-	for location in [g_measurements_location,r_measurements_location,i_measurements_location,z_measurements_location]
+	for location in [g_measurements_location,r_measurements_location,i_measurements_location,z_measurements_location]:
 		filenames = listdir(location)
 		bandname = location[-1]
 		Ts = np.ones(len(filenames))*-999
@@ -38,7 +38,7 @@ if do_size_histograms_per_exposure:
 			
 			Ts[i] = Ts_mean
 			Tm[i] = Tm_mean
-
+                        i=i+1
 		pl.figure()
 		pl.suptitle(bandname+'-band exposures '+naming)
 		pl.subplot(121)
