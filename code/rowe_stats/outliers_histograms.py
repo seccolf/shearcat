@@ -38,7 +38,7 @@ if do_size_histograms_per_exposure:
 			
 			Ts[i] = Ts_mean
 			Tm[i] = Tm_mean
-                        i=i+1
+			i=i+1
 		pl.figure()
 		pl.suptitle(bandname+'-band exposures '+naming)
 		pl.subplot(121)
