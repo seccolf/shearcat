@@ -1,17 +1,59 @@
 import matplotlib.pyplot as pl 
 import numpy as np 
 from astropy.io import fits
+from os import listdir
 
 
-do_both_together= True
+do_size_histograms_per_exposure = True
+do_both_together= False
 do_focalplane = False
 do_y1_histograms = False
 do_stack_chips = False 
 
 use_hsm=True #look for HSM columns if true
 
-
 naming = '_May9th_hsm'
+
+
+if do_size_histograms_per_exposure:
+	g_measurements_location ='/home/secco/project2-kicp-secco/delve/rowe_stats_measurements/g'
+	r_measurements_location ='/home/secco/project2-kicp-secco/delve/rowe_stats_measurements/r'
+	i_measurements_location ='/home/secco/project2-kicp-secco/delve/rowe_stats_measurements/i'
+	z_measurements_location ='/home/secco/project2-kicp-secco/delve/rowe_stats_measurements/z'
+
+	for location in [g_measurements_location,r_measurements_location,i_measurements_location,z_measurements_location]
+		filenames = listdir(location)
+		bandname = location[-1]
+		Ts = np.ones(len(filenames))*-999
+		Tm = np.ones(len(filenames))*-999
+		i=0
+		for filename in filenames:
+			g=fits.open(location+'/'+filename)
+			if use_hsm:
+				Ts_mean = np.nanmean(g[1].data['T_star_hsm'])
+				Tm_mean = np.nanmean(g[1].data['T_model_hsm'])
+			else:	
+				Ts_mean = np.nanmean(g[1].data['T_star'])
+				Tm_mean = np.nanmean(g[1].data['T_model'])
+			
+			Ts[i] = Ts_mean
+			Tm[i] = Tm_mean
+
+		pl.figure()
+		pl.suptitle(bandname+'-band exposures '+naming)
+		pl.subplot(121)
+		pl.xlabel('T_star')
+		pl.title('star sizes')
+		pl.hist(Ts_mean,range=[0,3],bins=100)
+		pl.subplot(122)
+		pl.xlabel('T_model')
+		pl.title('model sizes')
+		pl.hist(Tm_mean,range=[0,3],bins=100)
+		pl.savefig('/home/secco/SHEAR/shearcat/code/rowe_stats/figures/'+bandname+'_size_histograms_exposures_hsm.png',dpi=300)
+		pl.tight_layout()
+		pl.close()
+
+
 
 if do_stack_chips:
 	for band in ['g', 'r', 'i', 'z']:		
