@@ -62,7 +62,8 @@ def match_star_to_cat(starlist,cat,pixeldistance=1.0):
     print('Failed to find a match in the sextractor fullcat for %1.2f percent of the starlist stars'%(100*len(match_fail)/len(good_index)),flush=True)
     return matched_star_indices
 
-def get_index_of_star_in_full_catalog(Xstar,Ystar,cat,pixeldistance=1.0):
+def get_index_of_star_in_full_catalog(Xstar,Ystar,cat,pixeldistance=4.0):
+    #pixel distance is 4 because we don't want any overlap between detected objects (and PSF has size approx 4 pixels on average)
     #get the X and Y of all objects in catalog and compare with the input
     Xcat,Ycat = cat[2].data['x_image'],cat[2].data['y_image'] 
 
@@ -75,7 +76,7 @@ def get_index_of_star_in_full_catalog(Xstar,Ystar,cat,pixeldistance=1.0):
         if np.isscalar(indout):
             return indout
         else:
-            return indout[0]
+            return np.nan
     
 def check_if_star_should_have_been_masked(starlist, cat):
     #get the starlist entry, match it to sextractor catalog imaflags_iso and see if it has a mask
@@ -172,7 +173,7 @@ def delete_all_rsynced_files(location_del,expname_del):
     else:
         print('Will not delete inputs in ',location_of_stuff,flush=True)
     
-#########SOME LOOP
+#########START OF ACTUAL LOOPS
 location = '/home/secco/project2-kicp-secco/delve/rowe_stats_files/'
 output_location = '/home/secco/project2-kicp-secco/delve/rowe_stats_measurements/'
 all_exposures = listdir(location) #will get the names of all exposures as strings 'expXXXXXX'
@@ -186,8 +187,8 @@ for expname in exps_for_this_process: #loops over exposures!
     if expnum in np.loadtxt(output_location+'DONE_EXPS.txt'):
         print('PROCESS %d will not do exposure %s cause it was already done!'%(PROCESS,expname),flush=True)
         continue
-    #LOOP OF THE TYPE "for expname in exps_for_this_process"
-    rootdir = location+expname+'/' #'/home/secco/project2-kicp-secco/delve/rowe_stats_files/exp145973/'
+
+    rootdir = location+expname+'/' #results in eg. '/home/secco/project2-kicp-secco/delve/rowe_stats_files/exp145973/'
     band = get_band_name(listdir(rootdir)) #finds what band is in this exposure
     print('PROCESS %d doing %s (%s-band)'%(PROCESS,expname,band),flush=True)  
     outputfile_name =output_location+band+'/'+band+'band_'+expname+'.fits.fz'
@@ -204,8 +205,8 @@ for expname in exps_for_this_process: #loops over exposures!
     g1_star_hsm_out, g2_star_hsm_out, T_star_hsm_out, g1_model_hsm_out, g2_model_hsm_out, T_model_hsm_out = np.array([]), np.array([]),np.array([]), np.array([]),np.array([]), np.array([])
     mag_auto_out, imaflags_iso_out = np.array([]),np.array([])
     N_failed_stars = 0
-    N_failed_CCDS = 0
-    N_not_matched = 0
+    N_failed_CCDS = 0 #number of CCDS for this expnum that did not pass flags
+    N_bad_match = 0 #whether the star was not found in the sextractor catalog or if it has a close neighbor
     for name_of_image in listdir(path_to_image): #loops over the CCDs of an exposure!
         prefix = name_of_image[0:25] #the prefix containing expnum, band and ccdnum
         #print('doing ',prefix)
@@ -225,18 +226,30 @@ for expname in exps_for_this_process: #loops over exposures!
                                                                 psfmodel,
                                                                 path_to_cat,
                                                                 name_of_cat)
+        
+
         goodstar=get_psf_stars_index(starlist)
         Ngoodstar = len(goodstar)
         #pdb.set_trace()
-        if Ngoodstar<100:
-            print('CCD %s has less than 100 PSF stars: flagged.'%name_of_image,flush=True)
+        
+        #INITIAL FLAGGING: numbers of stars
+        #perform basic flagging of the CCD before running measurements over stars
+        if Ngoodstar<100: #FLAGGING 1: number of PSF stars is too small
+            print('!!!!FLAG CCD %s: has less than 100 PSF stars'%name_of_image,flush=True)
+            flag_bad_ccds = open(output_location+'FLAGGED_CCDS.txt','a')
+            flag_bad_ccds.write(name_of_image+'\n')
+            flag_bad_ccds.close()
+            N_failed_CCDS=N_failed_CCDS+1
+            continue
+        if Ngoodstar>int(0.25*np.sum(cat[2].data['IMAFLAGS_ISO']==0)):#FLAGGING 2: too many PSF stars
+            print('!!!!FLAG CCD %s: more than 25percent of the objects in image are stars'%name_of_image,flush=True)
             flag_bad_ccds = open(output_location+'FLAGGED_CCDS.txt','a')
             flag_bad_ccds.write(name_of_image+'\n')
             flag_bad_ccds.close()
             N_failed_CCDS=N_failed_CCDS+1
             continue
 
-         #returns stars that have psf_flags==0 and for which a match has been found
+        #starting output arrays for this CCD
         tmp_focal_x, tmp_focal_y =np.array([]), np.array([])
         tmp_pix_x, tmp_pix_y = np.array([]), np.array([])
         tmp_ra, tmp_dec = np.array([]), np.array([])
@@ -246,9 +259,8 @@ for expname in exps_for_this_process: #loops over exposures!
         tmp_g1_model_hsm, tmp_g2_model_hsm, tmp_T_model_hsm = np.array([]), np.array([]), np.array([])
         tmp_mag_auto = np.array([])
         tmp_imaflags_iso = np.array([])
-        #print('found %d stars that pass flags'%len(goodstar))
-        #ig = 0
-        for goodstar_index in goodstar:
+
+        for goodstar_index in goodstar: #start loop over good stars
 
             X = starlist[2].data['x_image'].astype(int)[goodstar_index] 
             Y = starlist[2].data['y_image'].astype(int)[goodstar_index]
@@ -256,19 +268,20 @@ for expname in exps_for_this_process: #loops over exposures!
             Y_float = starlist[2].data['y_image'][goodstar_index]
 
             #first, check if this star with PSF_FLAGS==0 has a match in the sextractor catalog:
-            location_in_catalog = get_index_of_star_in_full_catalog(X_float,Y_float,cat,pixeldistance=1.0)
-            #print('location_in_catalog=',location_in_catalog)
-            #pdb.set_trace()
+            location_in_catalog = get_index_of_star_in_full_catalog(X_float,Y_float,cat,pixeldistance=4.0)
+            #this returns nan if the star was not found or if it has a neighbor detection within 4 pixels (apprx 1 arcsec)
+
+            #NEXT FLAGGING: star is safely un-blended and was found in the sextractor catalog 
             if np.isnan(location_in_catalog):
-                #print('Did not find a sextractor match for this star',flush=True)
-                N_not_matched=N_not_matched+1
+                N_bad_match=N_bad_match+1
                 continue
-            #if a match was found, get flags and mag_auto
+
+            #if a good match was found, get imaflags_iso and mag_auto
             IMAFLAG_ISO=cat[2].data['imaflags_iso'][location_in_catalog]
             MAG_AUTO = cat[2].data['mag_auto'][location_in_catalog]
             
-            #now continue: re-bound the image around theright location
-            newbounds = galsim.BoundsI(X-stampsize/2,X+stampsize/2,Y-stampsize/2,Y+stampsize/2)
+            #now continue: re-bound the image around the right location
+            newbounds = galsim.BoundsI(X-stampsize/2 +1,X+stampsize/2 +1,Y-stampsize/2 +1,Y+stampsize/2 +1) #addition of 1 here suggested by Mike J.
             image_cutout = image[newbounds].array
             weight_cutout = weight[newbounds].array
             weight_cutout[weight_cutout<0.0]=0.0
@@ -284,8 +297,6 @@ for expname in exps_for_this_process: #loops over exposures!
 
             copy_stamp = image[newbounds].copy() #copies the galsim object with wcs and everything
             psf_image=psf_model.drawImage(image=copy_stamp,method='no_pixel')
-
-
 
             psf_cutout = psf_image.array
 
@@ -304,13 +315,15 @@ for expname in exps_for_this_process: #loops over exposures!
 
             psf_model_obs = ngmix.Observation(
             	image=psf_cutout,
-            	weight=np.ones(psf_cutout.shape),
+            	#weight=np.ones(psf_cutout.shape),
+                weight=weight_cutout, #give the same weights found in the image to the model! (suggested by Mike J.) 
             	jacobian=ngmix.Jacobian(row=stampsize/2 , col=stampsize/2 , wcs=psf_wcs))
 
             g1_star, g2_star, T_star = measure_shear_of_ngmix_obs(star_obs,prefix,goodstar_index)
             g1_model, g2_model, T_model = measure_shear_of_ngmix_obs(psf_model_obs,prefix,goodstar_index)
             g1_star_hsm, g2_star_hsm, T_star_hsm = measure_hsm_shear(hsm_input_im, hsm_input_wt)
-            g1_model_hsm, g2_model_hsm, T_model_hsm = measure_hsm_shear(psf_image,None)
+            #g1_model_hsm, g2_model_hsm, T_model_hsm = measure_hsm_shear(psf_image,None)
+            g1_model_hsm, g2_model_hsm, T_model_hsm = measure_hsm_shear(psf_image, hsm_input_wt)#give the same weights found in the image to the model! (suggested by Mike J.) 
  
             #print('g1_star, g2_star, T_star = ',g1_star, g2_star, T_star)
             #print('g1_model, g2_model, T_model =',g1_model, g2_model, T_model)
@@ -346,34 +359,70 @@ for expname in exps_for_this_process: #loops over exposures!
             
             tmp_mag_auto = np.append(tmp_mag_auto, MAG_AUTO)
             tmp_imaflags_iso = np.append(tmp_imaflags_iso, IMAFLAG_ISO)
-            #if ig>300:
-            #        pdb.set_trace()
+            #now go back and get the next goodstar to measure the PSF over
 
-        focal_x_out = np.append(focal_x_out,tmp_focal_x)
-        focal_y_out = np.append(focal_y_out,tmp_focal_y)
-        pix_x_out = np.append(pix_x_out, tmp_pix_x)
-        pix_y_out = np.append(pix_y_out, tmp_pix_y)
-        ra_out = np.append(ra_out, tmp_ra)
-        dec_out = np.append(dec_out, tmp_dec)
-        g1_star_out = np.append(g1_star_out, tmp_g1_star)
-        g2_star_out = np.append(g2_star_out, tmp_g2_star)
-        T_star_out = np.append(T_star_out, tmp_T_star)
-        g1_model_out = np.append(g1_model_out, tmp_g1_model)
-        g2_model_out = np.append(g2_model_out, tmp_g2_model)
-        T_model_out = np.append(T_model_out, tmp_T_model) 
+        #end loop over good stars (meaning the loop over all stars in a CCD)
+        
+        #NEXT FLAGGING:
+        #more than 3% of the goodstars had some nonzero imaflags_iso:
+        #more than 3% of the goodstars were not found in the sextractor catalog or had dangerously close neighbors
+        #the standard deviation of the sizes of the final PSF stars is >20% of the mean PSF size 
+        do_not_write_ccd = 0
+        if np.sum(tmp_imaflags_iso==0)/len(tmp_imaflags_iso) < 0.97:
+            print('!!!!FLAG CCD %s: more than 3percent of stars have some nonzero IMAFLAGS_ISO'%name_of_image,flush=True)
+            flag_bad_ccds = open(output_location+'FLAGGED_CCDS.txt','a')
+            flag_bad_ccds.write(name_of_image+'\n')
+            flag_bad_ccds.close()
+            do_not_write_ccd=do_not_write_ccd+1
+        if N_bad_match/Ngoodstar>0.03:
+            print('!!!!FLAG CCD %s: more than 3percent of stars were either blended or not found in sextractor cat'%name_of_image,flush=True)
+            flag_bad_ccds = open(output_location+'FLAGGED_CCDS.txt','a')
+            flag_bad_ccds.write(name_of_image+'\n')
+            flag_bad_ccds.close()
+            do_not_write_ccd=do_not_write_ccd+1
+        if np.nanstd(T_model)>0.2*np.nanmean(T_model):
+            print('!!!!FLAG CCD %s: stddev of NGMIX size greater than 0.2*NGMIX mean size'%name_of_image,flush=True)
+            flag_bad_ccds = open(output_location+'FLAGGED_CCDS.txt','a')
+            flag_bad_ccds.write(name_of_image+'\n')
+            flag_bad_ccds.close()
+            do_not_write_ccd=do_not_write_ccd+1
+        if np.nanstd(T_model_hsm)>0.2*np.nanmean(T_model_hsm):
+            print('!!!!FLAG CCD %s: stddev of HSM size greater than 0.2*HSM mean size'%name_of_image,flush=True)
+            flag_bad_ccds = open(output_location+'FLAGGED_CCDS.txt','a')
+            flag_bad_ccds.write(name_of_image+'\n')
+            flag_bad_ccds.close()
+            do_not_write_ccd=do_not_write_ccd+1
+        
+        #now write the measurements of this CCD to an output array if the flags immediately above passed
+        if do_not_write_ccd==0: 
 
-        g1_star_hsm_out = np.append(g1_star_hsm_out, tmp_g1_star_hsm)
-        g2_star_hsm_out = np.append(g2_star_hsm_out, tmp_g2_star_hsm)
-        T_star_hsm_out = np.append(T_star_hsm_out, tmp_T_star_hsm)
-        g1_model_hsm_out = np.append(g1_model_hsm_out, tmp_g1_model_hsm)
-        g2_model_hsm_out = np.append(g2_model_hsm_out, tmp_g2_model_hsm)
-        T_model_hsm_out = np.append(T_model_hsm_out, tmp_T_model_hsm) 
+            focal_x_out = np.append(focal_x_out,tmp_focal_x)
+            focal_y_out = np.append(focal_y_out,tmp_focal_y)
+            pix_x_out = np.append(pix_x_out, tmp_pix_x)
+            pix_y_out = np.append(pix_y_out, tmp_pix_y)
+            ra_out = np.append(ra_out, tmp_ra)
+            dec_out = np.append(dec_out, tmp_dec)
+            g1_star_out = np.append(g1_star_out, tmp_g1_star)
+            g2_star_out = np.append(g2_star_out, tmp_g2_star)
+            T_star_out = np.append(T_star_out, tmp_T_star)
+            g1_model_out = np.append(g1_model_out, tmp_g1_model)
+            g2_model_out = np.append(g2_model_out, tmp_g2_model)
+            T_model_out = np.append(T_model_out, tmp_T_model) 
 
-        imaflags_iso_out = np.append(imaflags_iso_out, tmp_imaflags_iso) 
-        mag_auto_out = np.append(mag_auto_out, tmp_mag_auto) 
-        #print('should be done with one ccd')
-        #pdb.set_trace()
-        #outputfile.close()
+            g1_star_hsm_out = np.append(g1_star_hsm_out, tmp_g1_star_hsm)
+            g2_star_hsm_out = np.append(g2_star_hsm_out, tmp_g2_star_hsm)
+            T_star_hsm_out = np.append(T_star_hsm_out, tmp_T_star_hsm)
+            g1_model_hsm_out = np.append(g1_model_hsm_out, tmp_g1_model_hsm)
+            g2_model_hsm_out = np.append(g2_model_hsm_out, tmp_g2_model_hsm)
+            T_model_hsm_out = np.append(T_model_hsm_out, tmp_T_model_hsm) 
+
+            imaflags_iso_out = np.append(imaflags_iso_out, tmp_imaflags_iso) 
+            mag_auto_out = np.append(mag_auto_out, tmp_mag_auto) 
+        #go back and start next CCD
+
+    #ended loop over all CCDs (completed the entire expnum), now apply more flags and write to file
+
+    #MISSING: before writing entire exposure to file, remove any CCDs whose mean size is an outlier compared to the other CCDS in the exposure
 
     c1 = fits.Column(name='focal_x', array=focal_x_out, format='e')
     c2 = fits.Column(name='focal_y', array=focal_y_out, format='e')

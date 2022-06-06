@@ -4,7 +4,7 @@ from astropy.io import fits
 
 BINS=150
 
-band='z'
+band='r'
 hsm=True
 
 if band=='g':
