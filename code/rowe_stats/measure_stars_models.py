@@ -23,7 +23,7 @@ NTASKS = int(environ['SLURM_NTASKS']) #total number of processes running
 
 #logging.basicConfig(filename='measurement.log', encoding='utf-8', level=logging.INFO, format='%(asctime)s %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p:')
 #RNG
-rng = np.random.RandomState(seed=666)
+rng = np.random.RandomState(seed=500)
 stampsize=48
 
 #assume given image and psf paths:
@@ -69,6 +69,7 @@ def get_index_of_star_in_full_catalog(Xstar,Ystar,cat,pixeldistance=4.0):
 
     wherex,wherey = np.isclose(Xstar,Xcat,atol=pixeldistance),np.isclose(Ystar,Ycat,atol=pixeldistance) 
     product = wherex*wherey 
+    #pdb.set_trace()
     if np.sum(product)!=1: 
             return np.nan
     else:
@@ -76,7 +77,7 @@ def get_index_of_star_in_full_catalog(Xstar,Ystar,cat,pixeldistance=4.0):
         if np.isscalar(indout):
             return indout
         else:
-            return np.nan
+            return indout[0]
     
 def check_if_star_should_have_been_masked(starlist, cat):
     #get the starlist entry, match it to sextractor catalog imaflags_iso and see if it has a mask
@@ -181,8 +182,8 @@ number_of_exps = len(all_exposures)
 
 expnumber_shared = round(number_of_exps/NTASKS +0.5)
 exps_for_this_process= all_exposures[ int(PROCESS*expnumber_shared) : int((PROCESS+1)*expnumber_shared) ]
-print('PROCESS %d will take care of exposures '%PROCESS,exps_for_this_process,flush=True)
-for expname in exps_for_this_process: #loops over exposures!
+#print('PROCESS %d will take care of exposures '%PROCESS,exps_for_this_process,flush=True)
+for expname in exps_for_this_process[0:3]: #loops over exposures!
     expnum = int(expname[3:])
     if expnum in np.loadtxt(output_location+'DONE_EXPS.txt'):
         print('PROCESS %d will not do exposure %s cause it was already done!'%(PROCESS,expname),flush=True)
@@ -230,6 +231,7 @@ for expname in exps_for_this_process: #loops over exposures!
 
         goodstar=get_psf_stars_index(starlist)
         Ngoodstar = len(goodstar)
+        #print('Found %d good stars in CCD %s'%(Ngoodstar,name_of_image),flush=True)
         #pdb.set_trace()
         
         #INITIAL FLAGGING: numbers of stars
@@ -242,7 +244,7 @@ for expname in exps_for_this_process: #loops over exposures!
             N_failed_CCDS=N_failed_CCDS+1
             continue
         if Ngoodstar>int(0.25*np.sum(cat[2].data['IMAFLAGS_ISO']==0)):#FLAGGING 2: too many PSF stars
-            print('!!!!FLAG CCD %s: more than 25percent of the objects in image are stars'%name_of_image,flush=True)
+            print('!!!!FLAG CCD %s: more than 25%% of the objects in image are stars'%name_of_image,flush=True)
             flag_bad_ccds = open(output_location+'FLAGGED_CCDS.txt','a')
             flag_bad_ccds.write(name_of_image+'\n')
             flag_bad_ccds.close()
@@ -369,33 +371,35 @@ for expname in exps_for_this_process: #loops over exposures!
         #the standard deviation of the sizes of the final PSF stars is >20% of the mean PSF size 
         do_not_write_ccd = 0
         if np.sum(tmp_imaflags_iso==0)/len(tmp_imaflags_iso) < 0.97:
-            print('!!!!FLAG CCD %s: more than 3percent of stars have some nonzero IMAFLAGS_ISO'%name_of_image,flush=True)
+            print('!!!!FLAG CCD %s: more than 3%% of stars have some nonzero IMAFLAGS_ISO'%name_of_image,flush=True)
             flag_bad_ccds = open(output_location+'FLAGGED_CCDS.txt','a')
             flag_bad_ccds.write(name_of_image+'\n')
             flag_bad_ccds.close()
             do_not_write_ccd=do_not_write_ccd+1
         if N_bad_match/Ngoodstar>0.03:
-            print('!!!!FLAG CCD %s: more than 3percent of stars were either blended or not found in sextractor cat'%name_of_image,flush=True)
+            print('!!!!FLAG CCD %s: more than 3%% of stars were either blended or not found in sextractor cat'%name_of_image,flush=True)
             flag_bad_ccds = open(output_location+'FLAGGED_CCDS.txt','a')
             flag_bad_ccds.write(name_of_image+'\n')
             flag_bad_ccds.close()
             do_not_write_ccd=do_not_write_ccd+1
-        if np.nanstd(T_model)>0.2*np.nanmean(T_model):
+        if np.nanstd(tmp_T_model)>0.2*np.nanmean(tmp_T_model):
             print('!!!!FLAG CCD %s: stddev of NGMIX size greater than 0.2*NGMIX mean size'%name_of_image,flush=True)
             flag_bad_ccds = open(output_location+'FLAGGED_CCDS.txt','a')
             flag_bad_ccds.write(name_of_image+'\n')
             flag_bad_ccds.close()
             do_not_write_ccd=do_not_write_ccd+1
-        if np.nanstd(T_model_hsm)>0.2*np.nanmean(T_model_hsm):
+        if np.nanstd(tmp_T_model_hsm)>0.2*np.nanmean(tmp_T_model_hsm):
             print('!!!!FLAG CCD %s: stddev of HSM size greater than 0.2*HSM mean size'%name_of_image,flush=True)
             flag_bad_ccds = open(output_location+'FLAGGED_CCDS.txt','a')
             flag_bad_ccds.write(name_of_image+'\n')
             flag_bad_ccds.close()
             do_not_write_ccd=do_not_write_ccd+1
+        #pdb.set_trace()
         
         #now write the measurements of this CCD to an output array if the flags immediately above passed
-        if do_not_write_ccd==0: 
-
+        if do_not_write_ccd>0:
+            N_failed_CCDS=N_failed_CCDS+1
+        else: 
             focal_x_out = np.append(focal_x_out,tmp_focal_x)
             focal_y_out = np.append(focal_y_out,tmp_focal_y)
             pix_x_out = np.append(pix_x_out, tmp_pix_x)
@@ -450,7 +454,7 @@ for expname in exps_for_this_process: #loops over exposures!
     time2=time()
     t.header['FAILED_stars']=(N_failed_stars, 'number of failed ngmix measurements')
     t.header['FAILED_ccds']=(N_failed_CCDS, 'number of failed ccds')
-    t.header['FAILED_nomatch']=(N_not_matched, 'number of stars not matched to sextractor cat')
+    t.header['FAILED_badmatch']=(N_bad_match, 'number of stars not matched to sextractor cat')
     time_it_took = (time2-time1)/60.0
     t.header['RUNTIME'] = ( time_it_took, 'minutes to run this exposure' )
     #print('should be done with one exposure')
