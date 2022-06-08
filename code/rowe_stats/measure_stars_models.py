@@ -20,12 +20,15 @@ import pdb
 #
 PROCESS = int(environ['SLURM_PROCID']) #process ID for a single cpu
 NTASKS = int(environ['SLURM_NTASKS']) #total number of processes running
+save_individual_CCDs = True #set to True only for debugging purposes
+do_flags = False #set to False ONLY FOR DEBUGGING PURPOSES
 
 location = '/home/secco/project2-kicp-secco/delve/rowe_stats_files/' #where to look for exposures
 output_location = '/home/secco/project2-kicp-secco/delve/rowe_stats_measurements/problematic_exposures/' #where to write results
 #all_exposures = listdir(location) #will get the names of all exposures as strings 'expXXXXXX'
 all_exposures = ['exp640670', 'exp830026','exp830031','exp736962']
 number_of_exps = len(all_exposures)
+
 
 #logging.basicConfig(filename='measurement.log', encoding='utf-8', level=logging.INFO, format='%(asctime)s %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p:')
 #RNG
@@ -273,20 +276,21 @@ for expname in exps_for_this_process: #loops over exposures!
         
         #INITIAL FLAGGING: numbers of stars
         #perform basic flagging of the CCD before running measurements over stars
-        if Ngoodstar<100: #FLAGGING 1: number of PSF stars is too small
-            print('!!!!FLAG CCD %s: has less than 100 PSF stars'%name_of_image,flush=True)
-            flag_bad_ccds = open(output_location+'FLAGGED_CCDS.txt','a')
-            flag_bad_ccds.write(name_of_image+'\n')
-            flag_bad_ccds.close()
-            N_failed_CCDS=N_failed_CCDS+1
-            continue
-        if Ngoodstar>int(0.25*np.sum(cat[2].data['IMAFLAGS_ISO']==0)):#FLAGGING 2: too many PSF stars
-            print('!!!!FLAG CCD %s: more than 25%% of the objects in image are stars'%name_of_image,flush=True)
-            flag_bad_ccds = open(output_location+'FLAGGED_CCDS.txt','a')
-            flag_bad_ccds.write(name_of_image+'\n')
-            flag_bad_ccds.close()
-            N_failed_CCDS=N_failed_CCDS+1
-            continue
+        if do_flags:
+            if Ngoodstar<100: #FLAGGING 1: number of PSF stars is too small
+                print('!!!!FLAG CCD %s: has less than 100 PSF stars'%name_of_image,flush=True)
+                flag_bad_ccds = open(output_location+'FLAGGED_CCDS.txt','a')
+                flag_bad_ccds.write(name_of_image+'\n')
+                flag_bad_ccds.close()
+                N_failed_CCDS=N_failed_CCDS+1
+                continue
+            if Ngoodstar>int(0.25*np.sum(cat[2].data['IMAFLAGS_ISO']==0)):#FLAGGING 2: too many PSF stars
+                print('!!!!FLAG CCD %s: more than 25%% of the objects in image are stars'%name_of_image,flush=True)
+                flag_bad_ccds = open(output_location+'FLAGGED_CCDS.txt','a')
+                flag_bad_ccds.write(name_of_image+'\n')
+                flag_bad_ccds.close()
+                N_failed_CCDS=N_failed_CCDS+1
+                continue
 
         #starting output arrays for this CCD
         tmp_focal_x, tmp_focal_y =np.array([]), np.array([])
@@ -400,7 +404,8 @@ for expname in exps_for_this_process: #loops over exposures!
             tmp_imaflags_iso = np.append(tmp_imaflags_iso, IMAFLAG_ISO)
             #now go back and get the next goodstar to measure the PSF over
         if save_individual_CCDs:
-            CCDOUT_name = output_location+band+name_of_image+'_.fits.fz'
+            print('Saving individual CCDS in: ',output_location+expname+'/')
+            CCDOUT_name = output_location+expname+'/'+band+name_of_image+'_.fits.fz'
             write_measurements_to_fits(OUTFITS_name,tmp_focal_x_out,tmp_focal_y_out,
                     tmp_pix_x_out,tmp_pix_y_out,tmp_ra_out,tmp_dec_out,
                     tmp_g1_star_out,tmp_g2_star_out,tmp_T_star_out,
