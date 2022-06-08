@@ -4,15 +4,22 @@ from astropy.io import fits
 from os import listdir
 
 
-do_size_histograms_per_exposure = True
-do_both_together= False
+do_size_histograms_per_exposure = False
+do_both_together= True
 do_focalplane = False
 do_y1_histograms = False
-do_stack_chips = False 
+do_stack_chips = False
+
+
 
 use_hsm=True #look for HSM columns if true
 
-naming = '_May9th_hsm'
+naming = '_June7th_hsm_blacklistcuts_'
+
+gcatname = 'gband_992exps.fits.fz'
+rcatname = 'rband_997exps.fits.fz'
+icatname = 'iband_995exps.fits.fz'
+zcatname = 'zband_996exps.fits.fz'
 
 
 if do_size_histograms_per_exposure:
@@ -107,13 +114,13 @@ if do_both_together:
 		dg2_des = g2s_des-g2m_des
 
 		if band=='g':
-			g = fits.open('gband_500exps.fits.fz')
+			g = fits.open('measurements/'+gcatname)
 		if band=='r':
-			g = fits.open('rband_500exps.fits.fz')
+			g = fits.open('measurements/'+rcatname)
 		if band=='i':
-			g = fits.open('iband_500exps.fits.fz')
+			g = fits.open('measurements/'+icatname)
 		if band=='z':
-			g = fits.open('zband_500exps.fits.fz')
+			g = fits.open('measurements/'+zcatname)
 
 		if use_hsm:
 			g1s,g2s,Ts = g[1].data['g1_star_hsm'], g[1].data['g2_star_hsm'], g[1].data['T_star_hsm']
@@ -139,7 +146,7 @@ if do_both_together:
 
 
 		pl.figure(figsize=(12,9))
-		pl.suptitle('DES Y1 and DECADE (%s-band)'%band)
+		pl.suptitle('DES Y1 and DELVE (%s-band)'%band)
 
 		pl.subplot(331)
 		pl.title(r'$e^{\mathrm{star}}_{1}$')
