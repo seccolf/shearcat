@@ -21,6 +21,12 @@ import pdb
 PROCESS = int(environ['SLURM_PROCID']) #process ID for a single cpu
 NTASKS = int(environ['SLURM_NTASKS']) #total number of processes running
 
+location = '/home/secco/project2-kicp-secco/delve/rowe_stats_files/' #where to look for exposures
+output_location = '/home/secco/project2-kicp-secco/delve/rowe_stats_measurements/problematic_exposures/' #where to write results
+#all_exposures = listdir(location) #will get the names of all exposures as strings 'expXXXXXX'
+all_exposures = ['exp640670', 'exp830026','exp830031','exp736962']
+number_of_exps = len(all_exposures)
+
 #logging.basicConfig(filename='measurement.log', encoding='utf-8', level=logging.INFO, format='%(asctime)s %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p:')
 #RNG
 rng = np.random.RandomState(seed=500)
@@ -174,16 +180,47 @@ def delete_all_rsynced_files(location_del,expname_del):
     else:
         print('Will not delete inputs in ',location_of_stuff,flush=True)
     
-#########START OF ACTUAL LOOPS
-location = '/home/secco/project2-kicp-secco/delve/rowe_stats_files/'
-output_location = '/home/secco/project2-kicp-secco/delve/rowe_stats_measurements/'
-all_exposures = listdir(location) #will get the names of all exposures as strings 'expXXXXXX'
-number_of_exps = len(all_exposures)
+def write_measurements_to_fits(OUTFITS_name,focal_x_out,focal_y_out,
+                    pix_x_out,pix_y_out,ra_out,dec_out,
+                    g1_star_out,g2_star_out,T_star_out,
+                    g1_model_out,g2_model_out,T_model_out
+                    g1_star_hsm_out,g2_star_hsm_out,T_star_hsm_out,
+                    g1_model_hsm_out,g2_model_hsm_out,T_model_hsm_out,
+                    imaflags_iso_out,mag_auto_out,N_failed_stars,N_failed_CCDS,N_bad_match):
+    c1 = fits.Column(name='focal_x', array=focal_x_out, format='e')
+    c2 = fits.Column(name='focal_y', array=focal_y_out, format='e')
+    c3 = fits.Column(name='pix_x', array=pix_x_out, format='e')
+    c4 = fits.Column(name='pix_y', array=pix_y_out, format='e')
+    c5 = fits.Column(name='ra', array=ra_out, format='e')
+    c6 = fits.Column(name='dec', array=dec_out, format='e')
+    c7 = fits.Column(name='g1_star', array=g1_star_out, format='e')
+    c8 = fits.Column(name='g2_star', array=g2_star_out, format='e')
+    c9 = fits.Column(name='T_star', array=T_star_out, format='e')
+    c10 = fits.Column(name='g1_model', array=g1_model_out, format='e')
+    c11 = fits.Column(name='g2_model', array=g2_model_out, format='e')
+    c12 = fits.Column(name='T_model', array=T_model_out, format='e')
 
+    c13 = fits.Column(name='g1_star_hsm', array=g1_star_hsm_out, format='e')
+    c14 = fits.Column(name='g2_star_hsm', array=g2_star_hsm_out, format='e')
+    c15 = fits.Column(name='T_star_hsm', array=T_star_hsm_out, format='e')
+    c16 = fits.Column(name='g1_model_hsm', array=g1_model_hsm_out, format='e')
+    c17 = fits.Column(name='g2_model_hsm', array=g2_model_hsm_out, format='e')
+    c18 = fits.Column(name='T_model_hsm', array=T_model_hsm_out, format='e')
+
+    c19 = fits.Column(name='IMAFLAGS_ISO', array=imaflags_iso_out, format='e')
+    c20 = fits.Column(name='MAG_AUTO', array=mag_auto_out, format='e')
+    t = fits.BinTableHDU.from_columns([c1,c2,c3,c4,c5,c6,c7,c8,c9,c10,c11,c12,c13,c14,c15,c16,c17,c18,c19,c20])
+    t.header['FAILED_stars']=(N_failed_stars, 'number of failed ngmix measurements')
+    t.header['FAILED_ccds']=(N_failed_CCDS, 'number of failed ccds')
+    t.header['FAILED_badmatch']=(N_bad_match, 'number of stars not matched to sextractor cat')
+    t.writeto(OUTFITS_name,overwrite=True)
+    return None
+
+#########START OF ACTUAL LOOPS
 expnumber_shared = round(number_of_exps/NTASKS +0.5)
 exps_for_this_process= all_exposures[ int(PROCESS*expnumber_shared) : int((PROCESS+1)*expnumber_shared) ]
 #print('PROCESS %d will take care of exposures '%PROCESS,exps_for_this_process,flush=True)
-for expname in exps_for_this_process[0:3]: #loops over exposures!
+for expname in exps_for_this_process: #loops over exposures!
     expnum = int(expname[3:])
     if expnum in np.loadtxt(output_location+'DONE_EXPS.txt'):
         print('PROCESS %d will not do exposure %s cause it was already done!'%(PROCESS,expname),flush=True)
@@ -362,7 +399,15 @@ for expname in exps_for_this_process[0:3]: #loops over exposures!
             tmp_mag_auto = np.append(tmp_mag_auto, MAG_AUTO)
             tmp_imaflags_iso = np.append(tmp_imaflags_iso, IMAFLAG_ISO)
             #now go back and get the next goodstar to measure the PSF over
-
+        if save_individual_CCDs:
+            CCDOUT_name = output_location+band+name_of_image+'_.fits.fz'
+            write_measurements_to_fits(OUTFITS_name,tmp_focal_x_out,tmp_focal_y_out,
+                    tmp_pix_x_out,tmp_pix_y_out,tmp_ra_out,tmp_dec_out,
+                    tmp_g1_star_out,tmp_g2_star_out,tmp_T_star_out,
+                    tmp_g1_model_out,tmp_g2_model_out,tmp_T_model_out
+                    tmp_g1_star_hsm_out,tmp_g2_star_hsm_out,tmp_T_star_hsm_out,
+                    tmp_g1_model_hsm_out,tmp_g2_model_hsm_out,tmp_T_model_hsm_out,
+                    tmp_imaflags_iso_out,tmp_mag_auto_out,N_failed_stars,N_failed_CCDS,N_bad_match)
         #end loop over good stars (meaning the loop over all stars in a CCD)
         
         #NEXT FLAGGING:
