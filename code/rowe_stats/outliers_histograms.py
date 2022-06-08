@@ -12,7 +12,7 @@ do_stack_chips = False
 
 
 
-use_hsm=True #look for HSM columns if true
+use_hsm=False #look for HSM columns if true
 
 naming = '_June7th_hsm_blacklistcuts_'
 
@@ -47,16 +47,16 @@ if do_size_histograms_per_exposure:
 			Tm[i] = Tm_mean
 			i=i+1
 		pl.figure()
-		pl.suptitle(bandname+'-band exposures '+naming)
+		pl.suptitle(bandname+'-band exposures NGmix')
 		pl.subplot(121)
 		pl.xlabel('T_star')
 		pl.title('star sizes')
-		pl.hist(Ts_mean,range=[0,3],bins=100)
+		pl.hist(Ts,range=[0,10],bins=30)
 		pl.subplot(122)
 		pl.xlabel('T_model')
 		pl.title('model sizes')
-		pl.hist(Tm_mean,range=[0,3],bins=100)
-		pl.savefig('/home/secco/SHEAR/shearcat/code/rowe_stats/figures/'+bandname+'_size_histograms_exposures_hsm.png',dpi=300)
+		pl.hist(Tm,range=[0,10],bins=30)
+		pl.savefig('/home/secco/SHEAR/shearcat/code/rowe_stats/figures/'+bandname+'_size_histograms_exposures_ngmix.png',dpi=300)
 		pl.tight_layout()
 		pl.close()
 
