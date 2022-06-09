@@ -7,6 +7,7 @@ import ngmix
 from ngmix.fitting import Fitter as LMSimple
 from ngmix.admom import AdmomFitter as Admom
 from ngmix.flags import get_flags_str as flagstr
+from ngmix import priors, joint_prior
 #usual stuff
 import numpy as np
 from astropy.io import fits
