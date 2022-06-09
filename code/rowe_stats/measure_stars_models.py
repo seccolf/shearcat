@@ -186,7 +186,7 @@ def delete_all_rsynced_files(location_del,expname_del):
 def write_measurements_to_fits(OUTFITS_name,focal_x_out,focal_y_out,
                     pix_x_out,pix_y_out,ra_out,dec_out,
                     g1_star_out,g2_star_out,T_star_out,
-                    g1_model_out,g2_model_out,T_model_out
+                    g1_model_out,g2_model_out,T_model_out,
                     g1_star_hsm_out,g2_star_hsm_out,T_star_hsm_out,
                     g1_model_hsm_out,g2_model_hsm_out,T_model_hsm_out,
                     imaflags_iso_out,mag_auto_out,N_failed_stars,N_failed_CCDS,N_bad_match):
@@ -406,13 +406,13 @@ for expname in exps_for_this_process: #loops over exposures!
         if save_individual_CCDs:
             print('Saving individual CCDS in: ',output_location+expname+'/')
             CCDOUT_name = output_location+expname+'/'+band+name_of_image+'_.fits.fz'
-            write_measurements_to_fits(OUTFITS_name,tmp_focal_x_out,tmp_focal_y_out,
-                    tmp_pix_x_out,tmp_pix_y_out,tmp_ra_out,tmp_dec_out,
-                    tmp_g1_star_out,tmp_g2_star_out,tmp_T_star_out,
-                    tmp_g1_model_out,tmp_g2_model_out,tmp_T_model_out
-                    tmp_g1_star_hsm_out,tmp_g2_star_hsm_out,tmp_T_star_hsm_out,
-                    tmp_g1_model_hsm_out,tmp_g2_model_hsm_out,tmp_T_model_hsm_out,
-                    tmp_imaflags_iso_out,tmp_mag_auto_out,N_failed_stars,N_failed_CCDS,N_bad_match)
+            write_measurements_to_fits(CCDOUT_name,tmp_focal_x,tmp_focal_y,
+                    tmp_pix_x,tmp_pix_y,tmp_ra,tmp_dec,
+                    tmp_g1_star,tmp_g2_star,tmp_T_star,
+                    tmp_g1_model,tmp_g2_model,tmp_T_model,
+                    tmp_g1_star_hsm,tmp_g2_star_hsm,tmp_T_star_hsm,
+                    tmp_g1_model_hsm,tmp_g2_model_hsm,tmp_T_model_hsm,
+                    tmp_imaflags_iso,tmp_mag_auto,N_failed_stars,N_failed_CCDS,N_bad_match)
         #end loop over good stars (meaning the loop over all stars in a CCD)
         
         #NEXT FLAGGING:
