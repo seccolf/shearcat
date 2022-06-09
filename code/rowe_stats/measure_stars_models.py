@@ -46,11 +46,12 @@ def load_psf_and_image(path_to_image, name_of_image, path_to_psf, starlist, psfm
     starlist = fits.open(path_to_psf+starlist)
     des_psfex = galsim.des.DES_PSFEx(path_to_psf+psfmodel,path_to_image+name_of_image)
     image_fits = fits.open(path_to_image+name_of_image)
+    fwhm=image_fits['SCI'].header['FWHM']*0.26 
     wcs_pixel_world = WCS(image_fits[1].header) 
     ccdcoords = findall(r'\d+',image_fits['sci'].header['detsec']) 
     min_x_pix, min_y_pix = int(ccdcoords[0]),int(ccdcoords[2])
     cat = fits.open(path_to_cat+name_of_cat)       
-    return image, weight, starlist, des_psfex, wcs_pixel_world, min_x_pix, min_y_pix, cat
+    return image, weight, starlist, des_psfex, wcs_pixel_world, min_x_pix, min_y_pix, cat, fwhm
 
 def match_star_to_cat(starlist,cat,pixeldistance=1.0):
     good_index = get_psf_stars_index(starlist)
@@ -106,10 +107,12 @@ def get_psf_stars_index(starlist):
 	return goodstars
 
 
-def measure_shear_of_ngmix_obs(obs,prefix,i):
+def measure_shear_of_ngmix_obs(obs,prefix,i,fwhm):
     am = Admom(rng=rng)
-    res = am.go(obs, 0.3)
+    T_guess = (fwhm / 2.35482)**2 * 2.
+    res = am.go(obs, T_guess)
     #pdb.set_trace()#understand what's inside res
+    pdb.set_trace()
     if res['flags'] != 0:
         return np.nan, np.nan, np.nan
     else:
@@ -261,7 +264,7 @@ for expname in exps_for_this_process: #loops over exposures!
         psfmodel = prefix+'psfexcat.psf'
         name_of_cat = prefix+'red-fullcat.fits'
 
-        image, weight, starlist, des_psfex, wcs_pixel_world, min_x, min_y,cat = load_psf_and_image(path_to_image,
+        image, weight, starlist, des_psfex, wcs_pixel_world, min_x, min_y,cat,fwhm = load_psf_and_image(path_to_image,
                                                                 name_of_image,
                                                                 path_to_psf,
                                                                 starlist,
@@ -363,8 +366,8 @@ for expname in exps_for_this_process: #loops over exposures!
                 weight=weight_cutout, #give the same weights found in the image to the model! (suggested by Mike J.) 
             	jacobian=ngmix.Jacobian(row=stampsize/2 , col=stampsize/2 , wcs=psf_wcs))
 
-            g1_star, g2_star, T_star = measure_shear_of_ngmix_obs(star_obs,prefix,goodstar_index)
-            g1_model, g2_model, T_model = measure_shear_of_ngmix_obs(psf_model_obs,prefix,goodstar_index)
+            g1_star, g2_star, T_star = measure_shear_of_ngmix_obs(star_obs,prefix,goodstar_index,fwhm)
+            g1_model, g2_model, T_model = measure_shear_of_ngmix_obs(psf_model_obs,prefix,goodstar_index,fwhm)
             g1_star_hsm, g2_star_hsm, T_star_hsm = measure_hsm_shear(hsm_input_im, hsm_input_wt)
             #g1_model_hsm, g2_model_hsm, T_model_hsm = measure_hsm_shear(psf_image,None)
             g1_model_hsm, g2_model_hsm, T_model_hsm = measure_hsm_shear(psf_image, hsm_input_wt)#give the same weights found in the image to the model! (suggested by Mike J.) 
