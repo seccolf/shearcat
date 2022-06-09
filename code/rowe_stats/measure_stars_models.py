@@ -116,7 +116,11 @@ def measure_shear_of_ngmix_obs(obs,prefix,i,fwhm):
     if res['flags'] != 0:
         return np.nan, np.nan, np.nan
     else:
-        return res['e1'],res['e2'],res['T']
+        g1,g2 = e1e2_to_g1g2(res['e1'],res['e2'])
+        if abs(g1) > 0.5 or abs(g2) > 0.5: #bad measurement
+            return np.nan, np.nan, np.nan
+        else:
+            return g1,g2,res['T']
     #        print('admom flagged object %d in: %s with flags %s'%(i,prefix,flagstr(res['flags'])))
     '''
     lm = LMSimple('gauss')
@@ -134,6 +138,49 @@ def measure_shear_of_ngmix_obs(obs,prefix,i,fwhm):
             #print("ngmix error in object %d in: %s"%(i,prefix))
             return np.nan, np.nan, np.nan
     '''
+def e1e2_to_g1g2(e1, e2): #from ngmix base code
+    """
+    convert e1,e2 to reduced shear style ellipticity
+    parameters
+    ----------
+    e1,e2: tuple of scalars
+        shapes in (ixx-iyy)/(ixx+iyy) style space
+    outputs
+    -------
+    g1,g2: scalars
+        Reduced shear space shapes
+    """
+    ONE_MINUS_EPS=0.99999999999999999
+    e = np.sqrt(e1 * e1 + e2 * e2)
+    if isinstance(e1, np.ndarray):
+        (w,) = np.where(e >= 1.0)
+        if w.size != 0:
+            raise Error("some e were out of bounds")
+        eta = np.arctanh(e)
+        g = np.tanh(0.5 * eta)
+        np.clip(g, 0.0, ONE_MINUS_EPS, g)
+        g1 = np.zeros(g.size)
+        g2 = np.zeros(g.size)
+        (w,) = np.where(e != 0.0)
+        if w.size > 0:
+            fac = g[w] / e[w]
+            g1[w] = fac * e1[w]
+            g2[w] = fac * e2[w]
+    else:
+        if e >= 1.0:
+            raise Error("e out of bounds: %s" % e)
+        if e == 0.0:
+            g1, g2 = 0.0, 0.0
+        else:
+            eta = np.arctanh(e)
+            g = np.tanh(0.5 * eta)
+            if g >= 1.0:
+                # round off?
+                g = ONE_MINUS_EPS
+            fac = g / e
+            g1 = fac * e1
+            g2 = fac * e2
+    return g1, g2
 
 def measure_hsm_shear(im, wt):
     MAX_CENTROID_SHIFT=1.0 #1 pixel recentering at most
