@@ -427,9 +427,9 @@ for expname in exps_for_this_process: #loops over exposures!
             image_cutout = image[newbounds].array
             weight_cutout = weight[newbounds].array
             #weight_cutout[weight_cutout<0.0]=0.0 #not sure this should be here - how is ngmix/hsm dealing with weights?
-            pdb.set_trace()
-            hsm_input_im = image[newbounds]
-            hsm_input_wt = weight[newbounds]
+            hsm_input_im = image[newbounds] - np.mean(image[newbounds].array)
+            hsm_input_wt = np.ones(hsm_input_im.array.shape)
+            #hsm_input_wt = weight[newbounds]
             hsm_input_wt.array[hsm_input_wt.array<0.0]=0.0
             #if np.any(weight_cutout<0.0):
             #    pdb.set_trace()
