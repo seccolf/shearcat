@@ -475,7 +475,7 @@ for expname in exps_for_this_process: #loops over exposures!
             #now go back and get the next goodstar to measure the PSF over
         if save_individual_CCDs:
             print('Saving individual CCDS in: ',output_location+expname+'/')
-            CCDOUT_name = output_location+expname+'/'+band+name_of_image+'_.fits.fz'
+            CCDOUT_name = output_location+expname+'/'+band+name_of_image+'_'+suffix+'_measured.fits.fz'
             write_measurements_to_fits(CCDOUT_name,tmp_focal_x,tmp_focal_y,
                     tmp_pix_x,tmp_pix_y,tmp_ra,tmp_dec,
                     tmp_g1_star,tmp_g2_star,tmp_T_star,
