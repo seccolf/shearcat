@@ -292,7 +292,7 @@ for expname in exps_for_this_process: #loops over exposures!
     rootdir = location+expname+'/' #results in eg. '/home/secco/project2-kicp-secco/delve/rowe_stats_files/exp145973/'
     band = get_band_name(listdir(rootdir)) #finds what band is in this exposure
     print('PROCESS %d doing %s (%s-band)'%(PROCESS,expname,band),flush=True)  
-    outputfile_name =output_location+band+'/'+band+'band_'+expname+'_'+suffix'.fits.fz'
+    outputfile_name =output_location+band+'/'+band+'band_'+expname+'_'+suffix+'.fits.fz'
 
     path_to_image = rootdir+band+'/' #exp145973/r/ for instance
     path_to_psf = rootdir+'psf_'+band+'/'#exp145973/psf_r/ for instance
