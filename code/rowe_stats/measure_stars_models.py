@@ -135,13 +135,13 @@ def measure_shear_of_ngmix_obs(obs,prefix,i,fwhm):
     res = am.go(obs, T_guess)
 
     #pdb.set_trace()#understand what's inside res
-    pdb.set_trace()
+    #pdb.set_trace()
     if res['flags'] != 0:#adaptive moments failed, let's return all nans
         return np.nan, np.nan, np.nan
     else: #adaptive moments succeded, let's either return the values or run LM 
         if do_ngmix_lm:
             g1,g2,T = measure_ngmix_lm(obs,res['pars'],prior)
-            pdb.set_trace()
+            #pdb.set_trace()
             return g1,g2,T
         else:
             g1,g2 = e1e2_to_g1g2(res['e1'],res['e2']) #transforms admom e1, e2 into reduced shears g1,g2
@@ -453,7 +453,7 @@ for expname in exps_for_this_process: #loops over exposures!
             	image=psf_cutout,
                 weight=weight_cutout, #give the same weights found in the image to the model! (suggested by Mike J.) 
             	jacobian=ngmix.Jacobian(row=stampsize/2 , col=stampsize/2 , wcs=psf_wcs))
-            pdb.set_trace()
+            #pdb.set_trace()
             g1_star, g2_star, T_star = measure_shear_of_ngmix_obs(star_obs,prefix,goodstar_index,fwhm)
             g1_model, g2_model, T_model = measure_shear_of_ngmix_obs(psf_model_obs,prefix,goodstar_index,fwhm)
             g1_star_hsm, g2_star_hsm, T_star_hsm = measure_hsm_shear(hsm_input_im, hsm_input_wt)
