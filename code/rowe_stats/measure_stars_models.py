@@ -137,6 +137,9 @@ def measure_shear_of_ngmix_obs(obs,prefix,i,fwhm):
 
     #pdb.set_trace()#understand what's inside res
     #pdb.set_trace()
+    if res['T']>5.0:
+        randname = 'postage'+str(np.random.randint(10000000))+'.npy'
+        np.save('/home/secco/project2-kicp-secco/delve/rowe_stats_measurements/problematic_exposures/example_problem_postage_stamps/'+randname,obs.array)
     if res['flags'] != 0:#adaptive moments failed, let's return all nans
         return np.nan, np.nan, np.nan
     else: #adaptive moments succeded, let's either return the values or run LM 
@@ -156,7 +159,8 @@ def measure_shear_of_ngmix_obs(obs,prefix,i,fwhm):
 def measure_ngmix_lm(obs,pars,prior):
     lm = LMSimple(model='gauss',prior=prior)
     try:
-            lm_res = lm.go(obs, pars) #obs is the ngmix observation, pars is the initial guess for the fitter (the admom result)
+            #lm_res = lm.go(obs,pars) #obs is the ngmix observation, pars is the initial guess for the fitter (the admom result)
+            lm_res = lm.go(obs) #will not use initial guesses from admom
             if lm_res['flags'] == 0:
                     g1 = lm_res['pars'][2]
                     g2 = lm_res['pars'][3]
