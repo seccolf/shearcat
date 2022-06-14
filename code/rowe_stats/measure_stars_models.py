@@ -25,7 +25,7 @@ suffix = 'Jun14th' #an identifier for this run, good to be explicit
 
 save_individual_CCDs = True #set to True only for debugging purposes
 do_flags = False #set to False ONLY FOR DEBUGGING PURPOSES
-
+do_ngmix_lm = True
 
 location = '/home/secco/project2-kicp-secco/delve/rowe_stats_files/' #where to look for exposures
 output_location = '/home/secco/project2-kicp-secco/delve/rowe_stats_measurements/problematic_exposures/' #where to write results
@@ -109,26 +109,51 @@ def get_psf_stars_index(starlist):
 	goodstars= np.where(starlist[2].data['flags_psf']==0)[0] 
 	return goodstars
 
+def make_ngmix_prior(T, pixel_scale):
+    #from https://github.com/rmjarvis/DESWL/blob/9e73af6c73fcce2a9017d71b01e81bc5aea1eec8/psf/run_piff.py#L732
+    # centroid is 1 pixel gaussian in each direction
+    cen_prior=priors.CenPrior(0.0, 0.0, pixel_scale, pixel_scale)
+
+    # g is Bernstein & Armstrong prior with sigma = 0.1
+    gprior=priors.GPriorBA(0.1)
+
+    # T is log normal with width 0.2
+    Tprior=priors.LogNormal(T, 0.2)
+
+    # flux is the only uninformative prior
+    Fprior=priors.FlatPrior(-10.0, 1.e10)
+
+    prior=joint_prior.PriorSimpleSep(cen_prior, gprior, Tprior, Fprior)
+    return prior
 
 def measure_shear_of_ngmix_obs(obs,prefix,i,fwhm):
     am = Admom(rng=rng)
     T_guess = (fwhm / 2.35482)**2 * 2.
+    prior = make_ngmix_prior(T_guess, 0.26)
+
+    #run adaptive moments
     res = am.go(obs, T_guess)
+
     #pdb.set_trace()#understand what's inside res
-    #pdb.set_trace()
-    if res['flags'] != 0:
+    pdb.set_trace()
+    if res['flags'] != 0:#adaptive moments failed, let's return all nans
         return np.nan, np.nan, np.nan
-    else:
-        g1,g2 = e1e2_to_g1g2(res['e1'],res['e2'])
-        if abs(g1) > 0.5 or abs(g2) > 0.5: #bad measurement
-            return np.nan, np.nan, np.nan
+    else: #adaptive moments succeded, let's either return the values or run LM 
+        if do_ngmix_lm:
+            g1,g2,T = measure_ngmix_lm(obs,res['pars'],prior)
+            pdb.set_trace()
         else:
-            return g1,g2,res['T']
-    #        print('admom flagged object %d in: %s with flags %s'%(i,prefix,flagstr(res['flags'])))
-    '''
-    lm = LMSimple('gauss')
+            g1,g2 = e1e2_to_g1g2(res['e1'],res['e2']) #transforms admom e1, e2 into reduced shears g1,g2
+            if abs(g1) > 0.5 or abs(g2) > 0.5: #bad measurement
+                return np.nan, np.nan, np.nan
+            else:
+                return g1,g2,res['T']
+
+
+def measure_ngmix_lm(obs,pars,prior):
+    lm = LMSimple(model='gauss',prior=prior)
     try:
-            lm_res = lm.go(obs, res['pars'])
+            lm_res = lm.go(obs, pars) #obs is the ngmix observation, pars is the initial guess for the fitter (the admom result)
             if lm_res['flags'] == 0:
                     g1 = lm_res['pars'][2]
                     g2 = lm_res['pars'][3]
@@ -140,7 +165,8 @@ def measure_shear_of_ngmix_obs(obs,prefix,i,fwhm):
     except:
             #print("ngmix error in object %d in: %s"%(i,prefix))
             return np.nan, np.nan, np.nan
-    '''
+
+
 def e1e2_to_g1g2(e1, e2): #from ngmix base code
     """
     convert e1,e2 to reduced shear style ellipticity
