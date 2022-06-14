@@ -8,13 +8,20 @@ band='r'
 hsm=True
 
 if band=='g':
-	f = fits.open('gband_500exps.fits.fz')
+	fname = 'gband_992exps.fits.fz'
+	f = fits.open('measurements/'+fname)
 if band=='r':
-	f = fits.open('rband_500exps.fits.fz')
+	fname = 'rband_997exps.fits.fz'
+	f = fits.open('measurements/'+fname)
 if band=='i':
-	f = fits.open('iband_500exps.fits.fz',memmap=False)
+	fname='iband_995exps.fits.fz'
+	f = fits.open('measurements/'+fname,memmap=False)
 if band=='z':
-	f = fits.open('zband_500exps.fits.fz')
+	fname='zband_996exps.fits.fz'
+	f = fits.open('measurements/'+fname)
+
+outputfigure_name = 'figures/'+band+'_focalplane_'+fname+'_hsm'+str(hsm)+'.png'
+print('Will save '+outputfigure_name)
 
 e1min,e1max = -0.05,0.05
 e2min,e2max = -0.05,0.05
@@ -27,12 +34,10 @@ if hsm:
 	focal_x,focal_y = f[1].data['focal_x'],f[1].data['focal_y'] 
 	g1s,g2s,Ts = f[1].data['g1_star_hsm'], f[1].data['g2_star_hsm'], f[1].data['T_star_hsm']
 	g1m,g2m,Tm = f[1].data['g1_model_hsm'], f[1].data['g2_model_hsm'], f[1].data['T_model_hsm']
-	outputfigure_name = band+'_focalplane_500exps_hsm.png'
 else:
 	focal_x,focal_y = f[1].data['focal_x'],f[1].data['focal_y'] 
 	g1s,g2s,Ts = f[1].data['g1_star'], f[1].data['g2_star'], f[1].data['T_star']
 	g1m,g2m,Tm = f[1].data['g1_model'], f[1].data['g2_model'], f[1].data['T_model']
-	outputfigure_name = 'figures/'+band+'_focalplane_500exps.png'
 
 
 modelfail=np.isnan(g1m)+np.isnan(g2m)+np.isnan(Tm)
