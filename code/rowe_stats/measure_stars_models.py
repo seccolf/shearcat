@@ -142,6 +142,7 @@ def measure_shear_of_ngmix_obs(obs,prefix,i,fwhm):
         if do_ngmix_lm:
             g1,g2,T = measure_ngmix_lm(obs,res['pars'],prior)
             pdb.set_trace()
+            return g1,g2,T
         else:
             g1,g2 = e1e2_to_g1g2(res['e1'],res['e2']) #transforms admom e1, e2 into reduced shears g1,g2
             if abs(g1) > 0.5 or abs(g2) > 0.5: #bad measurement
