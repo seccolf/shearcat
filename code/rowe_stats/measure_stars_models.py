@@ -139,7 +139,7 @@ def measure_shear_of_ngmix_obs(obs,prefix,i,fwhm):
     #pdb.set_trace()
     if res['T']>5.0:
         randname = 'postage'+str(np.random.randint(10000000))+'.npy'
-        np.save('/home/secco/project2-kicp-secco/delve/rowe_stats_measurements/problematic_exposures/example_problem_postage_stamps/'+randname,obs.array)
+        np.save('/home/secco/project2-kicp-secco/delve/rowe_stats_measurements/problematic_exposures/example_problem_postage_stamps/'+randname,obs.image)
     if res['flags'] != 0:#adaptive moments failed, let's return all nans
         return np.nan, np.nan, np.nan
     else: #adaptive moments succeded, let's either return the values or run LM 
