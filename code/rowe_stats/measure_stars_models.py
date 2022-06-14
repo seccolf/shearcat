@@ -21,8 +21,11 @@ import pdb
 #
 PROCESS = int(environ['SLURM_PROCID']) #process ID for a single cpu
 NTASKS = int(environ['SLURM_NTASKS']) #total number of processes running
+suffix = 'Jun14th' #an identifier for this run, good to be explicit
+
 save_individual_CCDs = True #set to True only for debugging purposes
 do_flags = False #set to False ONLY FOR DEBUGGING PURPOSES
+
 
 location = '/home/secco/project2-kicp-secco/delve/rowe_stats_files/' #where to look for exposures
 output_location = '/home/secco/project2-kicp-secco/delve/rowe_stats_measurements/problematic_exposures/' #where to write results
@@ -240,7 +243,8 @@ def write_measurements_to_fits(OUTFITS_name,focal_x_out,focal_y_out,
                     g1_model_out,g2_model_out,T_model_out,
                     g1_star_hsm_out,g2_star_hsm_out,T_star_hsm_out,
                     g1_model_hsm_out,g2_model_hsm_out,T_model_hsm_out,
-                    imaflags_iso_out,mag_auto_out,N_failed_stars,N_failed_CCDS,N_bad_match):
+                    imaflags_iso_out,flux_auto_out,fluxerr_auto_out,flux_aper_8_out,fluxerr_aper_8_out,
+                    N_failed_stars,N_failed_CCDS,N_bad_match):
     c1 = fits.Column(name='focal_x', array=focal_x_out, format='e')
     c2 = fits.Column(name='focal_y', array=focal_y_out, format='e')
     c3 = fits.Column(name='pix_x', array=pix_x_out, format='e')
@@ -262,8 +266,13 @@ def write_measurements_to_fits(OUTFITS_name,focal_x_out,focal_y_out,
     c18 = fits.Column(name='T_model_hsm', array=T_model_hsm_out, format='e')
 
     c19 = fits.Column(name='IMAFLAGS_ISO', array=imaflags_iso_out, format='e')
-    c20 = fits.Column(name='MAG_AUTO', array=mag_auto_out, format='e')
-    t = fits.BinTableHDU.from_columns([c1,c2,c3,c4,c5,c6,c7,c8,c9,c10,c11,c12,c13,c14,c15,c16,c17,c18,c19,c20])
+    #c20 = fits.Column(name='MAG_AUTO', array=mag_auto_out, format='e')
+    c20 = fits.Column(name='FLUX_AUTO', array=flux_auto_out, format='e')
+    c21 = fits.Column(name='FLUXERR_AUTO', array=fluxerr_auto_out, format='e')
+    c22 = fits.Column(name='FLUX_APER_8', array=flux_aper_8_out, format='e')
+    c23 = fits.Column(name='FLUXERR_APER_8', array=fluxerr_aper_8_out, format='e')
+    
+    t = fits.BinTableHDU.from_columns([c1,c2,c3,c4,c5,c6,c7,c8,c9,c10,c11,c12,c13,c14,c15,c16,c17,c18,c19,c20,c21,c22,c23])
     t.header['FAILED_stars']=(N_failed_stars, 'number of failed ngmix measurements')
     t.header['FAILED_ccds']=(N_failed_CCDS, 'number of failed ccds')
     t.header['FAILED_badmatch']=(N_bad_match, 'number of stars not matched to sextractor cat')
@@ -283,7 +292,7 @@ for expname in exps_for_this_process: #loops over exposures!
     rootdir = location+expname+'/' #results in eg. '/home/secco/project2-kicp-secco/delve/rowe_stats_files/exp145973/'
     band = get_band_name(listdir(rootdir)) #finds what band is in this exposure
     print('PROCESS %d doing %s (%s-band)'%(PROCESS,expname,band),flush=True)  
-    outputfile_name =output_location+band+'/'+band+'band_'+expname+'.fits.fz'
+    outputfile_name =output_location+band+'/'+band+'band_'+expname+'_'+suffix'.fits.fz'
 
     path_to_image = rootdir+band+'/' #exp145973/r/ for instance
     path_to_psf = rootdir+'psf_'+band+'/'#exp145973/psf_r/ for instance
@@ -295,7 +304,8 @@ for expname in exps_for_this_process: #loops over exposures!
     ra_out, dec_out = np.array([]), np.array([])
     g1_star_out, g2_star_out, T_star_out, g1_model_out, g2_model_out, T_model_out = np.array([]), np.array([]),np.array([]), np.array([]),np.array([]), np.array([])
     g1_star_hsm_out, g2_star_hsm_out, T_star_hsm_out, g1_model_hsm_out, g2_model_hsm_out, T_model_hsm_out = np.array([]), np.array([]),np.array([]), np.array([]),np.array([]), np.array([])
-    mag_auto_out, imaflags_iso_out = np.array([]),np.array([])
+    flux_auto_out,fluxerr_auto_out,flux_aper_8_out,fluxerr_aper_8_out = np.array([]), np.array([]),np.array([]), np.array([])  
+    imaflags_iso_out = np.array([])
     N_failed_stars = 0
     N_failed_CCDS = 0 #number of CCDS for this expnum that did not pass flags
     N_bad_match = 0 #whether the star was not found in the sextractor catalog or if it has a close neighbor
@@ -351,7 +361,8 @@ for expname in exps_for_this_process: #loops over exposures!
         tmp_g1_model, tmp_g2_model, tmp_T_model = np.array([]), np.array([]), np.array([])
         tmp_g1_star_hsm, tmp_g2_star_hsm, tmp_T_star_hsm = np.array([]), np.array([]), np.array([])
         tmp_g1_model_hsm, tmp_g2_model_hsm, tmp_T_model_hsm = np.array([]), np.array([]), np.array([])
-        tmp_mag_auto = np.array([])
+        #tmp_mag_auto = np.array([])
+        tmp_flux_auto,tmp_fluxerr_auto,tmp_flux_aper_8,tmp_fluxerr_aper_8 = np.array([]), np.array([]),np.array([]), np.array([])  
         tmp_imaflags_iso = np.array([])
 
         for goodstar_index in goodstar: #start loop over good stars
@@ -362,7 +373,7 @@ for expname in exps_for_this_process: #loops over exposures!
             Y_float = starlist[2].data['y_image'][goodstar_index]
 
             #first, check if this star with PSF_FLAGS==0 has a match in the sextractor catalog:
-            location_in_catalog = get_index_of_star_in_full_catalog(X_float,Y_float,cat,pixeldistance=4.0)
+            location_in_catalog = get_index_of_star_in_full_catalog(X_float,Y_float,cat,pixeldistance=5.0)
             #this returns nan if the star was not found or if it has a neighbor detection within 4 pixels (apprx 1 arcsec)
 
             #NEXT FLAGGING: star is safely un-blended and was found in the sextractor catalog 
@@ -372,13 +383,17 @@ for expname in exps_for_this_process: #loops over exposures!
 
             #if a good match was found, get imaflags_iso and mag_auto
             IMAFLAG_ISO=cat[2].data['imaflags_iso'][location_in_catalog]
-            MAG_AUTO = cat[2].data['mag_auto'][location_in_catalog]
+            #MAG_AUTO = cat[2].data['mag_auto'][location_in_catalog]
+            FLUX_AUTO = cat[2].data['FLUX_AUTO'][location_in_catalog]
+            FLUXERR_AUTO = cat[2].data['FLUXERR_AUTO'][location_in_catalog]
+            FLUX_APER_8 = cat[2].data['FLUX_APER'][location_in_catalog][7]
+            FLUXERR_APER_8 = cat[2].data['FLUXERR_APER'][location_in_catalog][7]
             
             #now continue: re-bound the image around the right location
             newbounds = galsim.BoundsI(X-stampsize/2 +1,X+stampsize/2 +1,Y-stampsize/2 +1,Y+stampsize/2 +1) #addition of 1 here suggested by Mike J.
             image_cutout = image[newbounds].array
             weight_cutout = weight[newbounds].array
-            weight_cutout[weight_cutout<0.0]=0.0
+            #weight_cutout[weight_cutout<0.0]=0.0 #not sure this should be here - how is ngmix/hsm dealing with weights?
 
             hsm_input_im = image[newbounds]
             hsm_input_wt = weight[newbounds]
@@ -451,8 +466,12 @@ for expname in exps_for_this_process: #loops over exposures!
             tmp_g2_model_hsm = np.append(tmp_g2_model_hsm, g2_model_hsm)
             tmp_T_model_hsm = np.append(tmp_T_model_hsm, T_model_hsm)
             
-            tmp_mag_auto = np.append(tmp_mag_auto, MAG_AUTO)
+            #tmp_mag_auto = np.append(tmp_mag_auto, MAG_AUTO)
             tmp_imaflags_iso = np.append(tmp_imaflags_iso, IMAFLAG_ISO)
+            tmp_flux_auto = np.append(tmp_flux_auto, FLUX_AUTO)
+            tmp_fluxerr_auto = np.append(tmp_fluxerr_auto, FLUXERR_AUTO)
+            tmp_flux_aper_8 = np.append(tmp_flux_aper_8, FLUX_APER_8)
+            tmp_fluxerr_aper_8 = np.append(tmp_fluxerr_aper_8, FLUXERR_APER_8)
             #now go back and get the next goodstar to measure the PSF over
         if save_individual_CCDs:
             print('Saving individual CCDS in: ',output_location+expname+'/')
@@ -463,7 +482,8 @@ for expname in exps_for_this_process: #loops over exposures!
                     tmp_g1_model,tmp_g2_model,tmp_T_model,
                     tmp_g1_star_hsm,tmp_g2_star_hsm,tmp_T_star_hsm,
                     tmp_g1_model_hsm,tmp_g2_model_hsm,tmp_T_model_hsm,
-                    tmp_imaflags_iso,tmp_mag_auto,N_failed_stars,N_failed_CCDS,N_bad_match)
+                    tmp_imaflags_iso,tmp_flux_auto,tmp_fluxerr_auto,tmp_flux_aper_8,tmp_fluxerr_aper_8,
+                    N_failed_stars,N_failed_CCDS,N_bad_match)
         #end loop over good stars (meaning the loop over all stars in a CCD)
         
         #NEXT FLAGGING:
@@ -523,44 +543,25 @@ for expname in exps_for_this_process: #loops over exposures!
 
             imaflags_iso_out = np.append(imaflags_iso_out, tmp_imaflags_iso) 
             mag_auto_out = np.append(mag_auto_out, tmp_mag_auto) 
+            flux_auto_out = np.append(flux_auto_out, tmp_flux_auto)
+            fluxerr_auto_out = np.append(fluxerr_auto_out, tmp_fluxerr_auto)
+            flux_aper_8_out = np.append(flux_aper_8_out, tmp_flux_aper_8)
+            fluxerr_aper_8_out = np.append(fluxerr_aper_8_out, tmp_fluxerr_aper_8)
+
         #go back and start next CCD
 
     #ended loop over all CCDs (completed the entire expnum), now apply more flags and write to file
 
     #MISSING: before writing entire exposure to file, remove any CCDs whose mean size is an outlier compared to the other CCDS in the exposure
+    write_measurements_to_fits(outputfile_name,focal_x_out,focal_y_out,
+            pix_x_out,pix_y_out,ra_out,dec_out,
+            g1_star_out,g2_star_out,T_star_out,
+            g1_model_out,g2_model_out,T_model_out,
+            g1_star_hsm_out,g2_star_hsm_out,T_star_hsm_out,
+            g1_model_hsm_out,g2_model_hsm_out,T_model_hsm_out,
+            imaflags_iso_out,flux_auto_out,fluxerr_auto_out,flux_aper_8_out,fluxerr_aper_8_out,
+            N_failed_stars,N_failed_CCDS,N_bad_match)
 
-    c1 = fits.Column(name='focal_x', array=focal_x_out, format='e')
-    c2 = fits.Column(name='focal_y', array=focal_y_out, format='e')
-    c3 = fits.Column(name='pix_x', array=pix_x_out, format='e')
-    c4 = fits.Column(name='pix_y', array=pix_y_out, format='e')
-    c5 = fits.Column(name='ra', array=ra_out, format='e')
-    c6 = fits.Column(name='dec', array=dec_out, format='e')
-    c7 = fits.Column(name='g1_star', array=g1_star_out, format='e')
-    c8 = fits.Column(name='g2_star', array=g2_star_out, format='e')
-    c9 = fits.Column(name='T_star', array=T_star_out, format='e')
-    c10 = fits.Column(name='g1_model', array=g1_model_out, format='e')
-    c11 = fits.Column(name='g2_model', array=g2_model_out, format='e')
-    c12 = fits.Column(name='T_model', array=T_model_out, format='e')
-
-    c13 = fits.Column(name='g1_star_hsm', array=g1_star_hsm_out, format='e')
-    c14 = fits.Column(name='g2_star_hsm', array=g2_star_hsm_out, format='e')
-    c15 = fits.Column(name='T_star_hsm', array=T_star_hsm_out, format='e')
-    c16 = fits.Column(name='g1_model_hsm', array=g1_model_hsm_out, format='e')
-    c17 = fits.Column(name='g2_model_hsm', array=g2_model_hsm_out, format='e')
-    c18 = fits.Column(name='T_model_hsm', array=T_model_hsm_out, format='e')
-
-    c19 = fits.Column(name='IMAFLAGS_ISO', array=imaflags_iso_out, format='e')
-    c20 = fits.Column(name='MAG_AUTO', array=mag_auto_out, format='e')
-    t = fits.BinTableHDU.from_columns([c1,c2,c3,c4,c5,c6,c7,c8,c9,c10,c11,c12,c13,c14,c15,c16,c17,c18,c19,c20])
-    time2=time()
-    t.header['FAILED_stars']=(N_failed_stars, 'number of failed ngmix measurements')
-    t.header['FAILED_ccds']=(N_failed_CCDS, 'number of failed ccds')
-    t.header['FAILED_badmatch']=(N_bad_match, 'number of stars not matched to sextractor cat')
-    time_it_took = (time2-time1)/60.0
-    t.header['RUNTIME'] = ( time_it_took, 'minutes to run this exposure' )
-    #print('should be done with one exposure')
-    #pdb.set_trace() 
-    t.writeto(outputfile_name,overwrite=True)
     print('PROCESS %d DONE: wrote %s to  %s (took %1.2f minutes)'%(PROCESS,expname,outputfile_name,time_it_took),flush=True)
 
     track_whats_done = open(output_location+'DONE_EXPS.txt','a')
