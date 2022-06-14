@@ -452,7 +452,7 @@ for expname in exps_for_this_process: #loops over exposures!
             	image=psf_cutout,
                 weight=weight_cutout, #give the same weights found in the image to the model! (suggested by Mike J.) 
             	jacobian=ngmix.Jacobian(row=stampsize/2 , col=stampsize/2 , wcs=psf_wcs))
-
+            pdb.set_trace()
             g1_star, g2_star, T_star = measure_shear_of_ngmix_obs(star_obs,prefix,goodstar_index,fwhm)
             g1_model, g2_model, T_model = measure_shear_of_ngmix_obs(psf_model_obs,prefix,goodstar_index,fwhm)
             g1_star_hsm, g2_star_hsm, T_star_hsm = measure_hsm_shear(hsm_input_im, hsm_input_wt)
