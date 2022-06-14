@@ -25,7 +25,7 @@ suffix = 'Jun14th' #an identifier for this run, good to be explicit
 
 save_individual_CCDs = True #set to True only for debugging purposes
 do_flags = False #set to False ONLY FOR DEBUGGING PURPOSES
-do_ngmix_lm = True
+do_ngmix_lm = False
 
 location = '/home/secco/project2-kicp-secco/delve/rowe_stats_files/' #where to look for exposures
 output_location = '/home/secco/project2-kicp-secco/delve/rowe_stats_measurements/problematic_exposures/' #where to write results
@@ -137,9 +137,9 @@ def measure_shear_of_ngmix_obs(obs,prefix,i,fwhm):
 
     #pdb.set_trace()#understand what's inside res
     #pdb.set_trace()
-    if res['T']>5.0:
-        randname = 'postage_T_'+str(res['T'])+'.npy'
-        np.save('/home/secco/project2-kicp-secco/delve/rowe_stats_measurements/problematic_exposures/example_problem_postage_stamps/'+randname,np.array([obs.image,obs.weight]))
+    #if res['T']>5.0:
+    #    randname = 'postage_T_'+str(res['T'])+'.npy'
+    #    np.save('/home/secco/project2-kicp-secco/delve/rowe_stats_measurements/problematic_exposures/example_problem_postage_stamps/'+randname,np.array([obs.image,obs.weight]))
     if res['flags'] != 0:#adaptive moments failed, let's return all nans
         return np.nan, np.nan, np.nan
     else: #adaptive moments succeded, let's either return the values or run LM 
