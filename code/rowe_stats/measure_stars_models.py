@@ -115,7 +115,7 @@ def measure_shear_of_ngmix_obs(obs,prefix,i,fwhm):
     T_guess = (fwhm / 2.35482)**2 * 2.
     res = am.go(obs, T_guess)
     #pdb.set_trace()#understand what's inside res
-    pdb.set_trace()
+    #pdb.set_trace()
     if res['flags'] != 0:
         return np.nan, np.nan, np.nan
     else:
