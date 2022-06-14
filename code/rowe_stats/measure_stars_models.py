@@ -450,7 +450,6 @@ for expname in exps_for_this_process: #loops over exposures!
 
             psf_model_obs = ngmix.Observation(
             	image=psf_cutout,
-            	#weight=np.ones(psf_cutout.shape),
                 weight=weight_cutout, #give the same weights found in the image to the model! (suggested by Mike J.) 
             	jacobian=ngmix.Jacobian(row=stampsize/2 , col=stampsize/2 , wcs=psf_wcs))
 
