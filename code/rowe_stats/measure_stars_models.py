@@ -115,13 +115,13 @@ def make_ngmix_prior(T, pixel_scale):
     cen_prior=priors.CenPrior(0.0, 0.0, pixel_scale, pixel_scale,rng)
 
     # g is Bernstein & Armstrong prior with sigma = 0.1
-    gprior=priors.GPriorBA(0.1)
+    gprior=priors.GPriorBA(0.1,rng)
 
     # T is log normal with width 0.2
-    Tprior=priors.LogNormal(T, 0.2)
+    Tprior=priors.LogNormal(T, 0.2,rng)
 
     # flux is the only uninformative prior
-    Fprior=priors.FlatPrior(-10.0, 1.e10)
+    Fprior=priors.FlatPrior(-10.0, 1.e10,rng)
 
     prior=joint_prior.PriorSimpleSep(cen_prior, gprior, Tprior, Fprior)
     return prior
