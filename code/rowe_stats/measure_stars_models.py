@@ -542,7 +542,7 @@ for expname in exps_for_this_process: #loops over exposures!
             T_model_hsm_out = np.append(T_model_hsm_out, tmp_T_model_hsm) 
 
             imaflags_iso_out = np.append(imaflags_iso_out, tmp_imaflags_iso) 
-            mag_auto_out = np.append(mag_auto_out, tmp_mag_auto) 
+            #mag_auto_out = np.append(mag_auto_out, tmp_mag_auto) 
             flux_auto_out = np.append(flux_auto_out, tmp_flux_auto)
             fluxerr_auto_out = np.append(fluxerr_auto_out, tmp_fluxerr_auto)
             flux_aper_8_out = np.append(flux_aper_8_out, tmp_flux_aper_8)
