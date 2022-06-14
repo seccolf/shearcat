@@ -112,7 +112,7 @@ def get_psf_stars_index(starlist):
 def make_ngmix_prior(T, pixel_scale):
     #from https://github.com/rmjarvis/DESWL/blob/9e73af6c73fcce2a9017d71b01e81bc5aea1eec8/psf/run_piff.py#L732
     # centroid is 1 pixel gaussian in each direction
-    cen_prior=priors.CenPrior(0.0, 0.0, pixel_scale, pixel_scale)
+    cen_prior=priors.CenPrior(0.0, 0.0, pixel_scale, pixel_scale,rng)
 
     # g is Bernstein & Armstrong prior with sigma = 0.1
     gprior=priors.GPriorBA(0.1)
