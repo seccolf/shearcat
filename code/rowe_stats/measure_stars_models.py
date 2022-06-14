@@ -561,7 +561,8 @@ for expname in exps_for_this_process: #loops over exposures!
             g1_model_hsm_out,g2_model_hsm_out,T_model_hsm_out,
             imaflags_iso_out,flux_auto_out,fluxerr_auto_out,flux_aper_8_out,fluxerr_aper_8_out,
             N_failed_stars,N_failed_CCDS,N_bad_match)
-
+    time2 = time()
+    time_it_took = time2-time1
     print('PROCESS %d DONE: wrote %s to  %s (took %1.2f minutes)'%(PROCESS,expname,outputfile_name,time_it_took),flush=True)
 
     track_whats_done = open(output_location+'DONE_EXPS.txt','a')
