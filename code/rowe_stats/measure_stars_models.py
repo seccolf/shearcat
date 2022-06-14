@@ -30,7 +30,8 @@ do_ngmix_lm = True
 location = '/home/secco/project2-kicp-secco/delve/rowe_stats_files/' #where to look for exposures
 output_location = '/home/secco/project2-kicp-secco/delve/rowe_stats_measurements/problematic_exposures/' #where to write results
 #all_exposures = listdir(location) #will get the names of all exposures as strings 'expXXXXXX'
-all_exposures = ['exp640670', 'exp830026','exp830031','exp736962']
+#all_exposures = ['exp640670', 'exp830026','exp830031','exp736962']
+all_exposures = ['exp830031','exp736962']
 number_of_exps = len(all_exposures)
 
 
@@ -140,6 +141,7 @@ def measure_shear_of_ngmix_obs(obs,prefix,i,fwhm):
         return np.nan, np.nan, np.nan
     else: #adaptive moments succeded, let's either return the values or run LM 
         if do_ngmix_lm:
+            pdb.set_trace()
             g1,g2,T = measure_ngmix_lm(obs,res['pars'],prior)
             #pdb.set_trace()
             return g1,g2,T
