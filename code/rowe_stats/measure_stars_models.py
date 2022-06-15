@@ -21,17 +21,17 @@ import pdb
 #
 PROCESS = int(environ['SLURM_PROCID']) #process ID for a single cpu
 NTASKS = int(environ['SLURM_NTASKS']) #total number of processes running
-suffix = 'Jun14th' #an identifier for this run, good to be explicit
+suffix = 'Jun15th' #an identifier for this run, good to be explicit
 
-save_individual_CCDs = True #set to True only for debugging purposes
+save_individual_CCDs = False #set to True only for debugging purposes
 do_flags = False #set to False ONLY FOR DEBUGGING PURPOSES
 do_ngmix_lm = False
 
 location = '/home/secco/project2-kicp-secco/delve/rowe_stats_files/' #where to look for exposures
-output_location = '/home/secco/project2-kicp-secco/delve/rowe_stats_measurements/problematic_exposures/' #where to write results
-#all_exposures = listdir(location) #will get the names of all exposures as strings 'expXXXXXX'
+output_location = '/home/secco/project2-kicp-secco/delve/rowe_stats_measurements/' #where to write results
+all_exposures = listdir(location) #will get the names of all exposures as strings 'expXXXXXX'
 #all_exposures = ['exp640670', 'exp830026','exp830031','exp736962']
-all_exposures = ['exp830031','exp736962']
+#all_exposures = ['exp830031','exp736962']
 number_of_exps = len(all_exposures)
 
 
@@ -424,12 +424,13 @@ for expname in exps_for_this_process: #loops over exposures!
             
             #now continue: re-bound the image around the right location
             newbounds = galsim.BoundsI(X-stampsize/2 +1,X+stampsize/2 +1,Y-stampsize/2 +1,Y+stampsize/2 +1) #addition of 1 here suggested by Mike J.
-            image_cutout = image[newbounds].array
+            image_cutout = image[newbounds].array - np.mean(image[newbounds].array)
+            #pdb.set_trace()
             weight_cutout = weight[newbounds].array
             #weight_cutout[weight_cutout<0.0]=0.0 #not sure this should be here - how is ngmix/hsm dealing with weights?
             hsm_input_im = image[newbounds] - np.mean(image[newbounds].array)
-            hsm_input_wt = np.ones(hsm_input_im.array.shape)
-            #hsm_input_wt = weight[newbounds]
+            #hsm_input_wt = np.ones(hsm_input_im.array.shape)
+            hsm_input_wt = weight[newbounds]
             hsm_input_wt.array[hsm_input_wt.array<0.0]=0.0
             #if np.any(weight_cutout<0.0):
             #    pdb.set_trace()
@@ -439,8 +440,8 @@ for expname in exps_for_this_process: #loops over exposures!
 
             copy_stamp = image[newbounds].copy() #copies the galsim object with wcs and everything
             psf_image=psf_model.drawImage(image=copy_stamp,method='no_pixel')
-
-            psf_cutout = psf_image.array
+            #pdb.set_trace()
+            psf_cutout = psf_image.array - np.mean(psf_image.array)
 
             #get the wcs at the location 
             psf_wcs = des_psfex.getLocalWCS(psf_pos)
@@ -523,30 +524,31 @@ for expname in exps_for_this_process: #loops over exposures!
         #more than 3% of the goodstars were not found in the sextractor catalog or had dangerously close neighbors
         #the standard deviation of the sizes of the final PSF stars is >20% of the mean PSF size 
         do_not_write_ccd = 0
-        if np.sum(tmp_imaflags_iso==0)/len(tmp_imaflags_iso) < 0.97:
-            print('!!!!FLAG CCD %s: more than 3%% of stars have some nonzero IMAFLAGS_ISO'%name_of_image,flush=True)
-            flag_bad_ccds = open(output_location+'FLAGGED_CCDS.txt','a')
-            flag_bad_ccds.write(name_of_image+'\n')
-            flag_bad_ccds.close()
-            do_not_write_ccd=do_not_write_ccd+1
-        if N_bad_match/Ngoodstar>0.03:
-            print('!!!!FLAG CCD %s: more than 3%% of stars were either blended or not found in sextractor cat'%name_of_image,flush=True)
-            flag_bad_ccds = open(output_location+'FLAGGED_CCDS.txt','a')
-            flag_bad_ccds.write(name_of_image+'\n')
-            flag_bad_ccds.close()
-            do_not_write_ccd=do_not_write_ccd+1
-        if np.nanstd(tmp_T_model)>0.2*np.nanmean(tmp_T_model):
-            print('!!!!FLAG CCD %s: stddev of NGMIX size greater than 0.2*NGMIX mean size'%name_of_image,flush=True)
-            flag_bad_ccds = open(output_location+'FLAGGED_CCDS.txt','a')
-            flag_bad_ccds.write(name_of_image+'\n')
-            flag_bad_ccds.close()
-            do_not_write_ccd=do_not_write_ccd+1
-        if np.nanstd(tmp_T_model_hsm)>0.2*np.nanmean(tmp_T_model_hsm):
-            print('!!!!FLAG CCD %s: stddev of HSM size greater than 0.2*HSM mean size'%name_of_image,flush=True)
-            flag_bad_ccds = open(output_location+'FLAGGED_CCDS.txt','a')
-            flag_bad_ccds.write(name_of_image+'\n')
-            flag_bad_ccds.close()
-            do_not_write_ccd=do_not_write_ccd+1
+        if do_flags:
+            if np.sum(tmp_imaflags_iso==0)/len(tmp_imaflags_iso) < 0.97:
+                print('!!!!FLAG CCD %s: more than 3%% of stars have some nonzero IMAFLAGS_ISO'%name_of_image,flush=True)
+                flag_bad_ccds = open(output_location+'FLAGGED_CCDS.txt','a')
+                flag_bad_ccds.write(name_of_image+'\n')
+                flag_bad_ccds.close()
+                do_not_write_ccd=do_not_write_ccd+1
+            if N_bad_match/Ngoodstar>0.03:
+                print('!!!!FLAG CCD %s: more than 3%% of stars were either blended or not found in sextractor cat'%name_of_image,flush=True)
+                flag_bad_ccds = open(output_location+'FLAGGED_CCDS.txt','a')
+                flag_bad_ccds.write(name_of_image+'\n')
+                flag_bad_ccds.close()
+                do_not_write_ccd=do_not_write_ccd+1
+            if np.nanstd(tmp_T_model)>0.2*np.nanmean(tmp_T_model):
+                print('!!!!FLAG CCD %s: stddev of NGMIX size greater than 0.2*NGMIX mean size'%name_of_image,flush=True)
+                flag_bad_ccds = open(output_location+'FLAGGED_CCDS.txt','a')
+                flag_bad_ccds.write(name_of_image+'\n')
+                flag_bad_ccds.close()
+                do_not_write_ccd=do_not_write_ccd+1
+            if np.nanstd(tmp_T_model_hsm)>0.2*np.nanmean(tmp_T_model_hsm):
+                print('!!!!FLAG CCD %s: stddev of HSM size greater than 0.2*HSM mean size'%name_of_image,flush=True)
+                flag_bad_ccds = open(output_location+'FLAGGED_CCDS.txt','a')
+                flag_bad_ccds.write(name_of_image+'\n')
+                flag_bad_ccds.close()
+                do_not_write_ccd=do_not_write_ccd+1
         #pdb.set_trace()
         
         #now write the measurements of this CCD to an output array if the flags immediately above passed
