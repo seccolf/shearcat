@@ -11,7 +11,9 @@ print('PROCESS %d is running the %s-band'%(PROCESS,band),flush=True)
 #find files
 location_of_exposures = '/home/secco/project2-kicp-secco/delve/rowe_stats_measurements/'+band+'/'
 all_exposures = listdir(location_of_exposures)
+
 #where to output the full catalog?
+PREFIX = 'Jun15th'
 location_of_output = '/home/secco/project2-kicp-secco/delve/rowe_stats_measurements/'
 
 #combine all outputs into a single array
@@ -36,7 +38,10 @@ g2_star_hsm = np.array([])
 g2_model_hsm = np.array([])
 T_model_hsm = np.array([]) 
 
-MAG_AUTO = np.array([])
+FLUX_AUTO = np.array([])
+FLUXERR_AUTO =np.array([])
+FLUX_APER_8 =np.array([])
+FLUXERR_APER_8 = np.array([])
 IMAFLAGS_ISO = np.array([])
 
 N_failed_stars = 0
@@ -44,33 +49,37 @@ N_failed_CCDS = 0
 N_failed_match = 0 
 
 for expame in all_exposures:
-	f = fits.open(location_of_exposures+expame)
-	focal_x = np.append(focal_x, f[1].data['focal_x'])
-	focal_y = np.append(focal_y, f[1].data['focal_y'])
-	pix_x = np.append(pix_x, f[1].data['pix_x'])
-	pix_y = np.append(pix_y, f[1].data['pix_y'])
-	ra = np.append(ra, f[1].data['ra'])
-	dec = np.append(dec, f[1].data['dec'])
-	g1_star = np.append(g1_star, f[1].data['g1_star'])
-	g1_model = np.append(g1_model, f[1].data['g1_model'])
-	T_star = np.append(T_star, f[1].data['T_star'])
-	T_model = np.append(T_model, f[1].data['T_model'])
-	g2_star = np.append(g2_star, f[1].data['g2_star'])
-	g2_model = np.append(g2_model, f[1].data['g2_model'])
+        f = fits.open(location_of_exposures+expame)
+        focal_x = np.append(focal_x, f[1].data['focal_x'])
+        focal_y = np.append(focal_y, f[1].data['focal_y'])
+        pix_x = np.append(pix_x, f[1].data['pix_x'])
+        pix_y = np.append(pix_y, f[1].data['pix_y'])
+        ra = np.append(ra, f[1].data['ra'])
+        dec = np.append(dec, f[1].data['dec'])
+        g1_star = np.append(g1_star, f[1].data['g1_star'])
+        g1_model = np.append(g1_model, f[1].data['g1_model'])
+        T_star = np.append(T_star, f[1].data['T_star'])
+        T_model = np.append(T_model, f[1].data['T_model'])
+        g2_star = np.append(g2_star, f[1].data['g2_star'])
+        g2_model = np.append(g2_model, f[1].data['g2_model'])
 
-	g1_star_hsm = np.append(g1_star_hsm, f[1].data['g1_star_hsm'])
-	g1_model_hsm = np.append(g1_model_hsm, f[1].data['g1_model_hsm'])
-	T_star_hsm = np.append(T_star_hsm, f[1].data['T_star_hsm'])
-	T_model_hsm = np.append(T_model_hsm, f[1].data['T_model_hsm'])
-	g2_star_hsm = np.append(g2_star_hsm, f[1].data['g2_star_hsm'])
-	g2_model_hsm = np.append(g2_model_hsm, f[1].data['g2_model_hsm'])
+        g1_star_hsm = np.append(g1_star_hsm, f[1].data['g1_star_hsm'])
+        g1_model_hsm = np.append(g1_model_hsm, f[1].data['g1_model_hsm'])
+        T_star_hsm = np.append(T_star_hsm, f[1].data['T_star_hsm'])
+        T_model_hsm = np.append(T_model_hsm, f[1].data['T_model_hsm'])
+        g2_star_hsm = np.append(g2_star_hsm, f[1].data['g2_star_hsm'])
+        g2_model_hsm = np.append(g2_model_hsm, f[1].data['g2_model_hsm'])
+        
+        FLUX_AUTO = np.append(FLUX_AUTO,f[1].data['FLUX_AUTO'])
+        FLUX_APER_8 = np.append(FLUX_APER_8,f[1].data['FLUX_APER_8'])
+        FLUXERR_APER_8 = np.append(FLUXERR_APER_8,f[1].data['FLUXERR_APER_8'])
+        FLUXERR_AUTO = np.append(FLUXERR_AUTO,f[1].data['FLUXERR_AUTO'])
 
-	MAG_AUTO = np.append(MAG_AUTO,f[1].data['MAG_AUTO'])
-	IMAFLAGS_ISO = np.append(IMAFLAGS_ISO,f[1].data['IMAFLAGS_ISO'])
+        IMAFLAGS_ISO = np.append(IMAFLAGS_ISO,f[1].data['IMAFLAGS_ISO'])
 
-	N_failed_stars = N_failed_stars + f[1].header['FAILED_stars']
-	N_failed_CCDS = N_failed_CCDS + f[1].header['FAILED_ccds']
-	N_failed_match = N_failed_match + f[1].header['FAILED_nomatch']
+        N_failed_stars = N_failed_stars + f[1].header['FAILED_stars']
+        N_failed_CCDS = N_failed_CCDS + f[1].header['FAILED_ccds']
+        N_failed_match = N_failed_match + f[1].header['FAILED_badmatch']
 
 print('Total number of objects for %d exposures in band %s: %d'%(len(all_exposures),band,len(ra)),flush=True)
 
@@ -94,18 +103,22 @@ c16 = fits.Column(name='g1_model_hsm', array=g1_model_hsm, format='e')
 c17 = fits.Column(name='g2_model_hsm', array=g2_model_hsm, format='e')
 c18 = fits.Column(name='T_model_hsm', array=T_model_hsm, format='e')
 
-c19 = fits.Column(name='MAG_AUTO', array=MAG_AUTO, format='e')
-c20 = fits.Column(name='IMAFLAGS_ISO', array=IMAFLAGS_ISO, format='e')
+#c19 = fits.Column(name='MAG_AUTO', array=MAG_AUTO, format='e')
+c19  = fits.Column(name='FLUX_AUTO', array=FLUX_AUTO, format='e')
+c20  = fits.Column(name='FLUXERR_AUTO', array=FLUXERR_AUTO, format='e')
+c21  = fits.Column(name='FLUX_APER_8', array=FLUX_APER_8, format='e')
+c22  = fits.Column(name='FLUXERR_APER_8', array=FLUXERR_APER_8, format='e')
+c23 = fits.Column(name='IMAFLAGS_ISO', array=IMAFLAGS_ISO, format='e')
 
-t = fits.BinTableHDU.from_columns([c1,c2,c3,c4,c5,c6,c7,c8,c9,c10,c11,c12,c13,c14,c15,c16,c17,c18,c19,c20])
+t = fits.BinTableHDU.from_columns([c1,c2,c3,c4,c5,c6,c7,c8,c9,c10,c11,c12,c13,c14,c15,c16,c17,c18,c19,c20,c21,c22,c23])
 #time2=time()
 t.header['FAILED_stars']=(N_failed_stars, 'number of failed ngmix measurements')
 t.header['FAILED_ccds']=(N_failed_CCDS, 'number of failed ccds (<100 stars)')
-t.header['FAILED_nomatch']=(N_failed_match, 'number of stars not matched to sextractor cat')
+t.header['FAILED_badmatch']=(N_failed_match, 'number of stars not matched to sextractor cat')
 #time_it_took = (time2-time1)/60.0
 #t.header['RUNTIME'] = ( time_it_took, 'minutes to run this exposure' )
 #print('should be done with one exposure')
 #pdb.set_trace() 
-outputfile_name = location_of_output+band+'band_%dexps.fits.fz'
+outputfile_name = location_of_output+PREFIX+'_'+band+'band_%dexps.fits.fz'%(len(all_exposures))
 t.writeto(outputfile_name,overwrite=False)
 #print('PROCESS %d DONE: wrote %s to  %s (took %1.2f minutes)'%(PROCESS,expname,outputfile_name,time_it_took))
