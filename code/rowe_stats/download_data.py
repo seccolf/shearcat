@@ -30,11 +30,13 @@ for expnum in expnums[start:end]:
         path_to_im = prefix+selected['PATH'].item()+'/'
         path_to_psf = prefix+selected['PATH.1'].item()+'/'
         path_to_cat = prefix+selected['PATH.1'].item()[0:-3]+'cat/'
+        path_to_bkg = prefix+selected['PATH.1'].item()[0:-3]+'red/bkg/'
         basedir = location+'exp'+str(expnum)
         basedir_image = basedir+'/'+band+'/'
         basedir_psf = basedir+'/psf_'+band+'/'
         basedir_cat = basedir+'/cat_'+band+'/'
-        createdirs = 'mkdir '+basedir+' '+basedir_image+' '+basedir_psf+' '+basedir_cat
+        basedir_bkg = basedir+'/bkg_'+band+'/'
+        createdirs = 'mkdir '+basedir+' '+basedir_image+' '+basedir_psf+' '+basedir_cat+' '+basedir_bkg
         #print(createdirs)
         os.system(createdirs)
         logging.info('Downloading exposure %d images (%s-band)...'%(expnum,band))
@@ -59,6 +61,12 @@ for expnum in expnums[start:end]:
         logging.info(rsync_command_cat)
         os.system(rsync_command_cat)    
         time4=time()
-        logging.info('Total download time including cat,im,psf files for exposure %d is %1.2f minutes\n'%(expnum, (time4-time1)/60.0))
+
+        rsync_command_bkg = 'rsync -a lsecco@deslogin.cosmology.illinois.edu:'+path_to_bkg+' '+basedir_bkg
+        logging.info(rsync_command_bkg)
+        os.system(rsync_command_bkg)    
+        time5=time()
+     
+        logging.info('Total download time including cat,im,psf,bkg files for exposure %d is %1.2f minutes\n'%(expnum, (time5-time1)/60.0))
         #print('Total download time including psf files for exposure %d is %1.2f minutes\n'%(expnum, (time3-time1)/60.0))
 
